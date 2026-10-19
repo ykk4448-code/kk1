@@ -301,3 +301,6 @@ button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,te
 .workspace-mode .mission-form .table-wrap{border-color:#e0e7e4}
 .workspace-mode .event-tools{background:#fff}
 .workspace-mode .map-legend{color:#6b7a7b}
+
+/* Tablet/mobile: inherited desktop align-self must not collapse the directory heading. */
+@media(max-width:940px){.landing-section-head{align-self:stretch;width:100%}}
