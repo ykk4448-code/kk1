@@ -1,0 +1,135 @@
+/* AETHER 6 · Mission operations console.
+ * Visual reference: timeline | geographic theatre + contextual inspector | results | playback.
+ * Scope deliberately limited to live simulation/assessment screens. */
+.workspace-mode:has(.assessment) .page{max-width:none;padding:22px clamp(16px,2vw,32px) 48px}
+.workspace-mode:has(.assessment) .page-heading{margin-bottom:15px}
+.workspace-mode:has(.assessment) .page-heading h1{font-size:27px;letter-spacing:-.045em}
+.workspace-mode:has(.assessment) .page-heading p{font-size:12px}
+.assessment{--ops-ink:#17273a;--ops-muted:#637487;--ops-line:#e3e7ea;--ops-accent:#136c75;--ops-warn:#c06745;--ops-paper:#fbfcfc;background:#fff;color:var(--ops-ink);border:1px solid #dadfe4;border-radius:14px;box-shadow:0 8px 32px #1c304009,0 1px 4px #1c304008;overflow:hidden}
+.assessment .assessment-toolbar{padding:18px 24px;background:#fff;border-bottom:1px solid var(--ops-line)}
+.assessment .desk-title{gap:13px}
+.assessment .desk-symbol{width:42px;height:42px;color:#fff;background:#16394b;border:0;border-radius:11px}
+.assessment .desk-title strong{color:#1d303f;font-size:17px;font-weight:720;letter-spacing:-.02em}
+.assessment .desk-title small{margin-top:5px;color:#657586;font-size:11px;letter-spacing:.03em}
+.assessment .desk-actions{gap:12px}
+.assessment .desk-actions label{font-size:12px;color:#506373;font-weight:600}
+.assessment .desk-actions select{background:#f7f9f9;border-color:#e1e6e7;min-width:180px;max-width:230px;font-size:12px;height:39px}
+.assessment .desk-actions .button{min-height:39px;font-size:12px;font-weight:650;border-radius:8px}
+.assessment .desk-actions .icon-button{width:39px;height:39px;border-radius:8px}
+.assessment .desk-kpis{grid-template-columns:repeat(5,minmax(0,1fr));padding:0;background:#f8faf9;gap:0;border-bottom:1px solid var(--ops-line)}
+.assessment .desk-kpis>div{padding:20px clamp(12px,1.6vw,23px);border-right:1px solid var(--ops-line);gap:8px}
+.assessment .desk-kpis>div>span{font-size:11px;color:#627382;font-weight:570;letter-spacing:.03em}
+.assessment .desk-kpis b{color:#1a3546;font-size:29px;letter-spacing:-.06em;font-weight:700;line-height:1.05}
+.assessment .desk-kpis>div:first-child b{color:#146a6c}
+.assessment .desk-kpis b small{font-size:12px;color:#667987;letter-spacing:0}
+.assessment .desk-kpis>div>small{color:#778692;font-size:10px;line-height:1.5;white-space:normal}
+.assessment .desk-layout{display:grid;grid-template-columns:minmax(288px,30%) minmax(0,1fr);grid-template-areas:'missions theatre';position:relative;gap:0;min-height:605px;border-bottom:1px solid var(--ops-line)}
+.assessment .schedule-panel{grid-area:missions;border-right:1px solid var(--ops-line);background:#fff}
+.assessment .spatial-panel{grid-area:theatre;position:relative;min-width:0;background:#edf1ed}
+.assessment .inspector-panel{grid-area:theatre;z-index:4;justify-self:end;align-self:start;width:min(298px,40%);margin:106px 17px 0;border:1px solid #d8e0e1;box-shadow:0 18px 54px #172f3540,0 2px 9px #172f3510;border-radius:12px;background:#fff;max-height:425px;overflow:auto;scrollbar-width:thin}
+.assessment .desk-panel>header{min-height:63px;padding:17px 19px;border-bottom-color:#e5e9e8;background:#fff}
+.assessment .desk-panel>header b{font-size:14px;font-weight:730;letter-spacing:-.01em;color:#223a49}
+.assessment .desk-panel>header small{font-size:10px;color:#87939b;letter-spacing:.1em;margin-top:5px;font-weight:590}
+.assessment .panel-counter{background:#f0f5f5;border-color:#e0e8e8;color:#476d72;font-size:11px;font-weight:670;border-radius:99px;padding:4px 10px}
+.assessment .schedule-tools{grid-template-columns:minmax(0,1fr) 117px;gap:8px;padding:16px;background:#fcfdfd}
+.assessment .schedule-tools input,.assessment .schedule-tools select{min-height:36px;font-size:12px;border:1px solid #dfe5e5;background:#fff;border-radius:7px;padding:6px 10px}
+.assessment .schedule-ruler{grid-template-columns:125px minmax(0,1fr);height:38px;padding:0 18px;background:#f4f7f7;color:#637881;font-size:11px;border-color:#e1e7e7}
+.assessment .schedule-ruler small{font-size:10px;color:#69818a}
+.assessment .schedule-scroll{height:390px;scrollbar-color:#c4d2d3 transparent}
+.assessment .schedule-row{grid-template-columns:125px minmax(0,1fr);padding:0 18px;height:64px;border-bottom-color:#e7ecec}
+.assessment .schedule-row:hover{background:#f5f9f8}
+.assessment .schedule-row.chosen{background:#eef5f4;box-shadow:inset 4px 0 #156f73}
+.assessment .schedule-label{gap:5px}
+.assessment .schedule-label b{font-size:12px;color:#2b4551;font-weight:730}
+.assessment .schedule-label small{font-size:11px;color:#788892}
+.assessment .schedule-track{background:repeating-linear-gradient(90deg,transparent,transparent calc(25% - 1px),#dce5e5 calc(25% - 1px),#dce5e5 25%)}
+.assessment .planned-bar{top:19px;height:22px;background:#dbece83a;border:1px dashed #95b8b5;border-radius:5px}
+.assessment .actual-bar{top:27px;height:7px;background:#167f82;border-radius:99px}
+.assessment .schedule-row.chosen .actual-bar{background:#d97f53;height:9px;top:26px}
+.assessment .incident-mark{color:#c16545}
+.assessment .schedule-legend{padding:16px 17px;font-size:11px;color:#71838d;border-top:1px solid #e8eded}
+.assessment .schedule-legend small{font-size:10px}
+.assessment .spatial-panel>header{position:relative;z-index:2;padding-left:24px;background:#f9fbfa}
+.assessment .live-badge{color:#277866;font-weight:650;font-size:11px}
+.assessment .live-badge i{width:7px;height:7px;background:#2b9a78;box-shadow:0 0 0 4px #2b9a7815}
+.assessment .desk-map-layers{height:43px;gap:15px;padding:0 20px;background:#fff;border-bottom:1px solid #e7ebeb}
+.assessment .desk-map-layers label{font-size:11px;color:#4f626d;font-weight:600}
+.assessment .desk-map-layers input{width:14px;height:14px;accent-color:#197e80}
+.assessment .desk-map-layers button{font-size:11px;color:#1d727b;font-weight:650}
+.assessment .spatial-panel .geo-map{height:455px;min-height:455px;background:#e4ebeb}
+.assessment .map-status-strip{height:43px;gap:17px;background:#fff;border-top:1px solid #e6ecea;padding:0 18px;flex-wrap:wrap}
+.assessment .map-status-strip span{font-size:10px;font-weight:590;color:#586d73}
+.assessment .map-status-strip small{font-size:10px}
+.assessment .inspector-panel>header{position:sticky;top:0;min-height:51px;padding:13px 17px;background:#f9fbfb;z-index:1}
+.assessment .inspector-panel>header b{font-size:12px}
+.assessment .inspector-panel>header small{display:none}
+.assessment .inspector-identity{padding:16px;gap:10px}
+.assessment .vehicle-glyph{background:#eaf4f3;color:#176e71;border:0;border-radius:9px;width:40px;height:40px}
+.assessment .inspector-identity b{font-size:13px;color:#213b4a;font-weight:730}
+.assessment .inspector-identity small{font-size:11px;color:#708390}
+.assessment .state-pill{font-size:10px;font-weight:700;padding:5px 7px;border-radius:5px}
+.assessment .inspector-position{margin:0 16px;padding:13px 0;font-size:12px}
+.assessment .inspector-position b{font-size:11px}
+.assessment .inspector-metrics{margin:14px 16px;gap:15px}
+.assessment .inspector-metrics span{font-size:11px;color:#718591}
+.assessment .inspector-metrics b{font-size:23px;color:#1a444d;letter-spacing:-.05em;font-weight:720}
+.assessment .inspector-metrics small{font-size:11px;color:#718591;letter-spacing:0}
+.assessment .range-status{margin:0 16px;padding:11px 0}
+.assessment .inspector-facts{padding:0 16px 18px}
+.assessment .desk-bottom{display:grid;grid-template-columns:minmax(0,1fr) 274px;gap:0;background:#fff;border-bottom:1px solid var(--ops-line)}
+.assessment .trend-panel>header,.assessment .fleet-panel>header{min-height:57px;padding:16px 20px}
+.assessment .trend-legend{gap:18px;padding:14px 22px 0;flex-wrap:wrap;font-size:11px}
+.assessment .trend-legend span{white-space:nowrap;color:#536a76}
+.assessment .trend-legend i{height:3px;width:16px;border-radius:5px}
+.assessment .trend-legend small{font-size:10px}
+.assessment .assessment-trend{height:194px;padding:10px 20px 10px}
+.assessment .assessment-trend text{fill:#687f89;font-size:11px}
+.assessment .fleet-panel{border-left:1px solid var(--ops-line)}
+.assessment #desk-fleet{height:235px}
+.assessment .fleet-row{min-height:53px;padding:10px 14px;gap:11px}
+.assessment .fleet-row.selected{background:#edf5f4;box-shadow:inset 3px 0 #167c7d}
+.assessment .fleet-row b{font-size:12px;color:#304856;font-weight:690}
+.assessment .fleet-row small,.assessment .fleet-row>.mono small{font-size:10px}
+.assessment .fleet-row .fleet-status{font-size:10px}
+.assessment .fleet-dot{height:8px;width:8px}
+.assessment .desk-player{position:relative;display:grid;grid-template-columns:43px 31px 31px 83px 85px minmax(130px,1fr) auto 31px;gap:12px;align-items:center;padding:16px 22px;background:#172d3b;border-bottom:0;color:#eff7f6}
+.assessment .desk-play{width:42px;height:42px;background:#e4edea;color:#163d43;border-radius:50%;font-size:15px;font-weight:800}
+.assessment .player-step{color:#d3dedd;font-size:15px;border-radius:5px}
+.assessment .player-step:hover{color:#fff;background:#ffffff1a}
+.assessment .desk-player>strong{color:#fff;font-size:14px;min-width:0;font-variant-numeric:tabular-nums}
+.assessment .desk-player>span{color:#acc2c8;font-size:11px;min-width:0}
+.assessment #desk-slider{height:6px;min-height:6px;background:linear-gradient(to right,#44b8ab var(--progress),#526b73 var(--progress))}
+.assessment #desk-slider::-webkit-slider-thumb{width:16px;height:16px;border:3px solid #fff;background:#3eada4;box-shadow:0 0 0 2px #2c827e}
+.assessment .speed-label{color:#c9dcde;font-size:11px}
+.assessment .speed-label select{background:#284555;color:#fff;border:1px solid #49636e;font-size:11px;min-width:65px}
+.assessment .desk-event-strip{background:#f4f7f7;padding:11px 21px;font-size:11px}
+.assessment .desk-methodology{padding:11px 21px;background:#f9fbfb;color:#73838b;font-size:10px}
+/* The event navigator is sourced from recorded simulation events, never synthetic live alerts. */
+.assessment .ops-incident-board{background:#fcfdfc;border-bottom:1px solid #e1e6e6;padding:15px 20px 18px}
+.assessment .ops-events-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.assessment .ops-events-title>div{display:flex;align-items:center;gap:9px}
+.assessment .ops-events-title strong{color:#243e49;font-size:12px;font-weight:730}
+.assessment .ops-events-title small{font-size:10px;color:#778992}
+.assessment .ops-events-title select{width:auto;min-height:29px;font-size:11px;background:#fff;border:1px solid #dce5e5;border-radius:5px;padding:3px 22px 3px 9px;color:#3e5665}
+.assessment .ops-events-scroll{display:flex;gap:8px;overflow-x:auto;scrollbar-width:thin;padding-bottom:3px;min-height:69px;scroll-snap-type:x proximity}
+.assessment .ops-event{scroll-snap-align:start;display:flex;align-items:flex-start;gap:8px;border:1px solid #e1e8e7;background:#fff;border-radius:8px;min-width:200px;max-width:248px;padding:11px 12px;flex-shrink:0;text-align:left;color:#3e5560}
+.assessment .ops-event:hover{border-color:#77afab;background:#f0f8f6}
+.assessment .ops-event.past{background:#f2f7f6}
+.assessment .ops-event.warning,.assessment .ops-event.failed{border-left:3px solid #b9654c}
+.assessment .ops-event.arrived{border-left:3px solid #319585}
+.assessment .ops-event.dispatch{border-left:3px solid #628a9e}
+.assessment .ops-event-time{font-size:11px;font-weight:730;color:#184f57;white-space:nowrap;font-variant-numeric:tabular-nums}
+.assessment .ops-event-copy{font-size:10px;line-height:1.55;color:#536873;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.assessment .ops-event-empty{font-size:12px;color:#778c95;padding:10px}
+.assessment .ops-time-bookmarks{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:10px 19px;background:#1f3948;color:#b7ced0;border-bottom:1px solid #37525d}
+.assessment .ops-time-bookmarks b{font-size:10px;letter-spacing:.07em;font-weight:620}
+.assessment .ops-markers{display:flex;gap:5px;flex-wrap:wrap}
+.assessment .ops-markers button{border:1px solid #42616a;background:#2a4654;border-radius:5px;color:#d6e6e8;font-size:11px;padding:5px 10px;min-height:29px}
+.assessment .ops-markers button:hover{background:#3a6771;border-color:#70b6b0}
+.assessment .ops-keyboard-hint{font-size:10px;color:#aec4c8}
+.assessment .desk-notice{font-size:12px}
+@media(max-width:1400px){.assessment .desk-layout{grid-template-columns:minmax(267px,32%) minmax(0,1fr)}.assessment .inspector-panel{width:255px}.assessment .desk-kpis>div{padding:17px 13px}.assessment .desk-kpis b{font-size:25px}.assessment .desk-map-layers{gap:8px}.assessment .map-status-strip{gap:9px}}
+@media(max-width:1150px){.assessment .desk-layout{grid-template-columns:minmax(255px,34%) minmax(0,1fr);grid-template-areas:'missions theatre' 'inspector inspector';min-height:0}.assessment .inspector-panel{grid-area:inspector;width:auto;max-height:none;margin:0;border:0;border-top:1px solid var(--ops-line);box-shadow:none;border-radius:0;justify-self:stretch;overflow:visible}.assessment #desk-inspector{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}.assessment .inspector-identity,.assessment .inspector-position{border:0}.assessment .schedule-scroll{height:340px}.assessment .spatial-panel .geo-map{height:425px;min-height:425px}.assessment .desk-map-layers{flex-wrap:wrap;height:auto;min-height:43px;padding:9px 14px}.assessment .desk-kpis>div>small{display:none}.assessment .desk-kpis b{font-size:23px}}
+@media(max-width:830px){.assessment .desk-layout{display:flex;flex-direction:column}.assessment .spatial-panel{order:1}.assessment .schedule-panel{order:2;border-right:0;border-top:1px solid var(--ops-line)}.assessment .inspector-panel{order:3}.assessment .desk-map-layers{gap:15px}.assessment .spatial-panel .geo-map{height:390px;min-height:390px}.assessment .desk-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.assessment .desk-kpis>div:nth-child(3){border-right:0}.assessment .desk-kpis>div{border-bottom:1px solid var(--ops-line)}.assessment .desk-bottom{grid-template-columns:1fr}.assessment .fleet-panel{border-left:0;border-top:1px solid var(--ops-line)}.assessment #desk-fleet{height:auto;max-height:230px}.assessment .desk-player{grid-template-columns:40px 29px 29px 75px 1fr auto;gap:8px}.assessment .desk-player>span{display:none}.assessment .desk-player .player-step:last-child{display:none}.assessment .ops-keyboard-hint{display:none}}
+@media(max-width:580px){.workspace-mode:has(.assessment) .page{padding:16px 10px 36px}.assessment{border-radius:10px}.assessment .assessment-toolbar{flex-direction:column;align-items:stretch;padding:14px}.assessment .desk-title strong{font-size:15px}.assessment .desk-actions{justify-content:space-between}.assessment .desk-actions label{flex:1}.assessment .desk-actions select{min-width:0;max-width:190px}.assessment .desk-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.assessment .desk-kpis>div{padding:13px}.assessment .desk-kpis>div:nth-child(3){border-right:1px solid var(--ops-line)}.assessment .desk-kpis>div:nth-child(even){border-right:0}.assessment .desk-kpis>div:last-child{grid-column:1/-1}.assessment .desk-kpis b{font-size:25px}.assessment .desk-panel>header{min-height:54px;padding:13px 14px}.assessment .spatial-panel .geo-map{height:318px;min-height:318px}.assessment .map-status-strip{height:auto;min-height:43px}.assessment #desk-inspector{display:grid;grid-template-columns:1fr 1fr}.assessment .inspector-identity,.assessment .inspector-position{grid-column:1/-1}.assessment .schedule-scroll{height:330px}.assessment .schedule-row,.assessment .schedule-ruler{grid-template-columns:104px 1fr}.assessment .schedule-tools{padding:10px}.assessment .schedule-label b{font-size:11px}.assessment .desk-player{grid-template-columns:36px 24px 24px minmax(0,1fr) 66px;gap:5px;padding:12px 11px}.assessment .desk-play{width:34px;height:34px}.assessment .desk-player>strong{font-size:11px;min-width:0}.assessment .desk-player #desk-slider{grid-column:1/5;grid-row:2;width:100%;min-width:0}.assessment .desk-player .speed-label{grid-column:5;grid-row:2}.assessment .desk-player .speed-label select{min-width:48px;width:48px}.assessment .desk-player>.player-step:last-child{display:none}.assessment .ops-time-bookmarks{align-items:flex-start;flex-wrap:wrap}.assessment .ops-events-title{align-items:flex-start}.assessment .ops-events-title>div{align-items:flex-start;flex-direction:column;gap:4px}.assessment .trend-legend small{margin:0}.assessment .assessment-trend{height:166px;padding:5px}}
+@media(prefers-reduced-motion:reduce){.assessment *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}

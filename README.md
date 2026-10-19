@@ -130,3 +130,9 @@ node --check frontend/assets/assessment.js
 ### 二级页面导航验收
 
 可运行 `python scripts/build_preview.py` 生成不需要后端服务器的只读预览；如安装 Chromium 和 Playwright，运行 `python frontend/tests/test_navigation_browser.py` 可验证五个一级入口及二级菜单、浏览器历史和移动布局。业务接口和写入行为另由 `pytest backend/tests` 验证。
+
+
+## 行动推演工作台 · 任务时序与空间联动（第六轮 UI 改进）
+
+依据任务回放参考图，行动推演和综合评估统一采用左侧任务甘特、主地图、可选平台检查器、底部统计曲线及播放器布局。新增事件索引（派遣/异常/交付）和首个异常定位、25% 时间快捷跳转、键盘逐事件导航；这些功能使用数据库中保存的仿真回放数据，不是实时无人机遥测。详见 [工作台交互说明](docs/mission-console-v6.md)。
+
