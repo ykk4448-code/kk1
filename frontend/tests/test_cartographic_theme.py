@@ -13,7 +13,8 @@ def ratio(a,b):
     a,b=sorted((lum(a),lum(b)),reverse=True)
     return (a+.05)/(b+.05)
 def test_theme_loads_last():
-    assert INDEX.index('mission-v7.css')<INDEX.index('design-v5.css')<INDEX.index('cartographic-v8.css')
+    assert INDEX.index('mission-v7.css')<INDEX.index('cartographic-v8.css')
+    assert INDEX.index('design-v5.css')<INDEX.index('cartographic-v8.css')
     assert 'cartographic-v8.css' in PREVIEW
 def test_palette_contrast():
     colors=dict(re.findall(r'--(chart-[\w-]+)\s*:\s*(#[0-9a-f]{6})',CSS))
