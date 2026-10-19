@@ -20,6 +20,13 @@ def ratio(a, b):
     return (light + .05) / (dark + .05)
 
 
+def color_token(name):
+    """Check the active token, including later refinements in the same stylesheet."""
+    values = re.findall(rf"{re.escape(name)}\s*:\s*(#[0-9a-fA-F]{{6}})\s*;", STYLE)
+    assert values, name
+    return values[-1]
+
+
 def test_engineering_style_last_in_stylesheet_cascade():
     assert 'href="/assets/engineering-v10.css"' in INDEX
     assert INDEX.index("lightblue-v9.css") < INDEX.index("engineering-v10.css")
@@ -28,16 +35,20 @@ def test_engineering_style_last_in_stylesheet_cascade():
 
 def test_text_and_primary_button_contrast():
     for fg, bg in [
-        ("#243140", "#ffffff"), ("#586777", "#ffffff"),
-        ("#586777", "#f3f5f7"), ("#ffffff", "#285f94"),
-        ("#b9c7d2", "#243447")
+        (color_token('--eng-ink'), color_token('--eng-surface')),
+        (color_token('--eng-muted'), color_token('--eng-surface')),
+        (color_token('--eng-muted'), color_token('--eng-canvas')),
+        ("#ffffff", "#2b6b97"),
+        ("#e4eef7", "#2d668b"),
+        (color_token('--eng-ink-strong'), color_token('--eng-surface-alt')),
     ]:
         assert ratio(fg, bg) >= 4.5, (fg, bg)
 
 
-def test_not_a_promotional_gradient_theme():
-    assert "--eng-canvas:#f3f5f7" in STYLE
-    assert "--eng-navigation:#243447" in STYLE
+def test_maritime_theme_keeps_readable_chrome_and_original_map_tiles():
+    assert color_token('--eng-canvas') == '#edf2f6'
+    assert color_token('--eng-navigation') == '#173b5c'
+    assert "color-scheme:light" in STYLE
     assert "box-shadow:none!important" in STYLE
     assert ".landing-glow" in STYLE
     assert ".geo-map .geo-tile{filter:none!important" in STYLE

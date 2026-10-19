@@ -73,7 +73,7 @@ html=html.replace('<link rel="stylesheet" href="/assets/engineering-v10.css">','
 # Frontend sources are ES modules. In preview only, flatten imports and exports
 # into one classic script. This is a read-only rendering snapshot, not product code.
 chunks=[]
-for name in ['api.js','charts.js','map.js','assessment.js','app.js']:
+for name in ['api.js','charts.js','mission-view.js','map.js','assessment.js','app.js']:
     js=(ROOT/'frontend/assets'/name).read_text(encoding='utf-8')
     js=re.sub(r'^import\s+.+?;\s*$', '', js,flags=re.MULTILINE)
     js=re.sub(r'\bexport\s+(?=async|const|function|class|let)', '', js)
@@ -136,6 +136,7 @@ prelude=prelude.replace('__FRAMES__',json.dumps(replay_frames,ensure_ascii=False
 js=prelude+'\n'+'\n'.join(chunks)
 html=html.replace('<script type="module" src="/assets/app.js"></script>','<script>'+js+'</script>')
 mission_js=(ROOT/'frontend/assets/mission-v7.js').read_text(encoding='utf-8').replace("import {get} from './api.js';",'').replace('export function ','function ')
+mission_js='(function(){\n'+mission_js+'\n})();'  # Keep module-local names such as safe/cache isolated.
 html=html.replace('<script type="module" src="/assets/mission-v7.js"></script>','<script>'+mission_js+'</script>')
 html=html.replace('<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">','')
 out=ROOT/'preview.html'

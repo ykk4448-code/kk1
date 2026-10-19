@@ -31,11 +31,11 @@ with sync_playwright() as playwright:
     assert page.locator('button:visible').count() == 5
     assert page.locator('.rail:visible').count() == 0
     assert page.locator('.topbar:visible').count() == 0
-    assert page.locator('.landing-modules').evaluate('(el) => getComputedStyle(el).gridTemplateColumns.split(" ").length') == 1
-    assert page.locator('.landing-module').first.evaluate('(el) => getComputedStyle(el).backgroundColor') in ('rgba(0, 0, 0, 0)', 'rgb(0, 0, 0, 0)')
+    assert page.locator('.landing-modules').evaluate('(el) => getComputedStyle(el).gridTemplateColumns.split(" ").length') == 5
+    assert 'linear-gradient' in page.locator('.portal-landing').evaluate('(el) => getComputedStyle(el).backgroundImage')
 
     routes = [('data', 'nodes'), ('scenario', 'list'), ('planning', 'workspace'),
-              ('simulation', 'control'), ('analytics', 'transport')]
+              ('simulation', 'control'), ('analytics', 'overview')]
     for width, height in [(1440, 900), (768, 1024), (390, 844)]:
         page.set_viewport_size({'width': width, 'height': height})
         assert page.locator('button:visible').count() == 5
@@ -46,8 +46,10 @@ with sync_playwright() as playwright:
             assert page.locator('.page-heading h1:visible').count() == 1
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), f'{module} overflow at {width}'
             assert page.locator('#nav .rail-link.selected').count() == 1
+            # Module controls form a horizontal ribbon, never a left sidebar.
+            assert page.locator('.rail').evaluate('(el) => el.getBoundingClientRect().width') >= width - 24
             page.locator('.home-link').click()
             assert page.locator('button:visible').count() == 5
     assert not errors, errors
     browser.close()
-print('PASS: editorial portal, five route targets, responsive workspaces, no page overflow or JS errors')
+print('PASS: five-subsystem portal, horizontal mission ribbon, responsive workspaces, no page overflow or JS errors')

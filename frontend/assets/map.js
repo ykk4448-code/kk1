@@ -11,14 +11,17 @@ export function renderGeoMap(network,city,plan,opts={}){
  const el=document.getElementById('geo-map');if(!el)return;
  const nodes=network?.nodes||[],edges=network?.edges||[],fleet=network?.vehicles||[];
  const geographic=nodes.length>0&&nodes.every(n=>Number.isFinite(n.lat)&&Number.isFinite(n.lon))&&new Set(nodes.map(n=>`${n.lat},${n.lon}`)).size>1;
- const key=`${city?.id||'snapshot'}:${geographic?'geo':'xy'}`;
+ const view=opts.missionView,focus=opts.mapMode==='focus'&&view?.path.length>0;
+ const key=`${city?.id||'snapshot'}:${geographic?'geo':'xy'}:${opts.run?.id||''}:${focus?opts.selectedTask:'all'}`;
+ el.classList.toggle('mission-focused',Boolean(focus));
  const w=el.clientWidth||800,h=el.clientHeight||450;
  function fit(){
   if(!geographic){camera.center=[50,50];camera.zoom=0;return;}
-  const lats=nodes.map(n=>n.lat),lons=nodes.map(n=>n.lon);camera.center=[(Math.min(...lats)+Math.max(...lats))/2,(Math.min(...lons)+Math.max(...lons))/2];
+  const fitted=focus?view.path:nodes;
+  const lats=fitted.map(n=>n.lat),lons=fitted.map(n=>n.lon);camera.center=[(Math.min(...lats)+Math.max(...lats))/2,(Math.min(...lons)+Math.max(...lons))/2];
   for(let zoom=15;zoom>=7;zoom--){const a=mercator(Math.min(...lats),Math.min(...lons),zoom),b=mercator(Math.max(...lats),Math.max(...lons),zoom);if(Math.abs(a[0]-b[0])<w*.74&&Math.abs(a[1]-b[1])<h*.72){camera.zoom=zoom;return;}}camera.zoom=7;
  }
- if(camera.key!==key){camera.key=key;fit();}
+ if(camera.key!==key||camera.size!==`${w}x${h}`){camera.key=key;camera.size=`${w}x${h}`;fit();}
  const tiles=el.querySelector('#geo-tiles'),svg=el.querySelector('#geo-overlay'),layer=opts.layers||{},visible=k=>layer[k]!==false;
  el.classList.toggle('synthetic-map',!geographic);
  const center=geographic?mercator(...camera.center,camera.zoom):[0,0],left=center[0]-w/2,top=center[1]-h/2;
@@ -38,31 +41,81 @@ export function renderGeoMap(network,city,plan,opts={}){
  const assignment=plan?.assignment_data?.find(a=>a.task_id===opts.selectedTask);
  const selectedEdges=new Set(assignment?.path_edges||[]),routeEdges=new Set(opts.routes&&visible('routes')?plan?.assignment_data?.flatMap(a=>a.path_edges)||[]:[]);
  for(const id of opts.preview?.edges||[])selectedEdges.add(id);
- const edgeMarkup=edges.map(e=>{const a=byId[e.source],b=byId[e.target];if(!a||!b)return '';const chosen=selectedEdges.has(e.id)&&visible('routes'),route=routeEdges.has(e.id);if(!visible('links')&&!chosen&&!route)return '';const p=point(a),q=point(b),stroke=e.status==='closed'?'#d95a58':chosen?'#286bdb':route?'#5799ba':e.status==='restricted'?'#cb9749':'#9dabb8';return `<g><line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="#fff" stroke-width="${chosen?7:4}" stroke-opacity=".85"/><line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="${stroke}" stroke-width="${chosen?3.8:route?2.6:1.5}" stroke-opacity="${assignment && !chosen ? .5 : .9}" ${e.status==='open'?'':'stroke-dasharray="5 4"'}/></g>`;}).join('');
- const occupied=[];
+ const edgeMarkup=edges.map(e=>{
+  const a=byId[e.source],b=byId[e.target];if(!a||!b)return '';
+  const chosen=selectedEdges.has(e.id)&&visible('routes'),route=routeEdges.has(e.id);
+  if(!visible('links')&&!chosen&&!route)return '';
+  if(view&&chosen)return ''; // The selected route is rendered in chronological order below.
+  const p=point(a),q=point(b),stroke=e.status==='closed'?'#d95a58':chosen?'#286bdb':route?'#5799ba':e.status==='restricted'?'#cb9749':'#9dabb8';
+  return `<line class="geo-network-link" x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="${stroke}" stroke-width="${chosen?3:route?1.8:1}" stroke-opacity="${focus ? 0.18 : chosen ? 0.95 : route ? 0.55 : 0.3}" ${e.status==='open'?'':'stroke-dasharray="5 5"'}/>`;
+ }).join('');
+ const routeLine=(path,clazz)=>path?.length>1?`<polyline class="${clazz}" points="${path.map(n=>point(n).join(',')).join(' ')}"/>`:'';
+ let routeMarkup='';
+ if(view&&visible('routes')){
+  routeMarkup=routeLine(view.path,'mission-route-casing')+routeLine(view.path,'mission-route-base')+routeLine(view.remaining,'mission-route-remaining');
+  if(view.hasReposition&&assignment?.reposition_nodes?.length>1)routeMarkup+=routeLine(assignment.reposition_nodes.map(id=>byId[id]).filter(Boolean),'mission-route-reposition');
+  routeMarkup+=routeLine(view.traveled,'mission-route-traveled');
+  for(let i=0;i<view.path.length-1;i++){
+   const p=point(view.path[i]),q=point(view.path[i+1]);if(Math.hypot(q[0]-p[0],q[1]-p[1])<55)continue;
+   const angle=Math.atan2(q[1]-p[1],q[0]-p[0])*180/Math.PI;
+   routeMarkup+=`<path class="mission-route-arrow" d="M-7-5L0 0L-7 5" transform="translate(${(p[0]+q[0])/2} ${(p[1]+q[1])/2}) rotate(${angle})"/>`;
+  }
+ }
+ const positions=opts.telemetry?.vehicles||[];
+ const selectedVehicle=positions.find(v=>v.vehicle_id===opts.selectedVehicle);
+ const actorPosition=view?view.position:selectedVehicle;
+ const hasActor=actorPosition&&(geographic?Number.isFinite(actorPosition.lat)&&Number.isFinite(actorPosition.lon):Number.isFinite(actorPosition.x)&&Number.isFinite(actorPosition.y));
+ const actorPoint=hasActor?point(actorPosition):null;
+ const occupied=actorPoint?[{x:actorPoint[0]-25,y:actorPoint[1]-29,w:160,h:65}]:[];
+ const labelWidth=text=>[...text].reduce((sum,c)=>sum+(/[\u2e80-\uffff]/.test(c)?14:8),16);
  const important=new Set(assignment?.path_nodes||[]);
- const ordered=nodes.slice().sort((a,b)=>Number(important.has(b.id))-Number(important.has(a.id)));
+ const priority=n=>n.id===assignment?.destination?0:n.id===assignment?.origin?1:n.id===view?.departure?.id?2:important.has(n.id)?3:4;
+ const ordered=nodes.slice().sort((a,b)=>priority(a)-priority(b));
  const nodeMarkup=visible('facilities')?ordered.map(n=>{
   const [x,y]=point(n),c=colors[n.category]||'#4584a9';if(x< -40||y< -40||x>w+40||y>h+40)return '';
-  let label='';const width=n.name.length*11+12;
-  if(visible('labels')){
-   const candidates=[{x:x+10,y:y-12},{x:x+10,y:y+6},{x:x-width-10,y:y-12}];
-   const box=candidates.find(b=>b.x>3&&b.y>40&&b.x+width<w-35&&b.y+22<h-32&&!occupied.some(o=>b.x<o.x+o.w+3&&b.x+width+3>o.x&&b.y<o.y+25&&b.y+25>o.y));
-   if(box){occupied.push({...box,w:width});label=`<rect x="${box.x}" y="${box.y}" width="${width}" height="22" rx="3" fill="#fff" fill-opacity=".93"/><text x="${box.x+6}" y="${box.y+15}" fill="#384b61" font-size="11" font-weight="600">${esc(n.name)}</text>`;}
+  const pickup=n.id===assignment?.origin,drop=n.id===assignment?.destination,departure=n.id===view?.departure?.id&&!pickup;
+  const endpoint=Boolean(view&&(pickup||drop||departure));
+  const displayLabel=!focus||endpoint||n.id===view?.next?.id;
+  let label='';const text=(view?(drop?'交付 · ':pickup?'取货 · ':departure?'出发 · ':''):'')+n.name,width=labelWidth(text);
+  if(visible('labels')&&displayLabel){
+   const candidates=[{x:x+17,y:y-14},{x:x-width-17,y:y-14},{x:x-width/2,y:y+21},{x:x-width/2,y:y-46},{x:x-width/2,y:y+55},{x:x+17,y:y+17},{x:x-width-17,y:y+17}];
+   const box=candidates.find(b=>b.x>5&&b.y>65&&b.x+width<w-44&&b.y+28<h-34&&!occupied.some(o=>b.x<o.x+o.w+5&&b.x+width+5>o.x&&b.y<o.y+(o.h||28)+5&&b.y+33>o.y));
+   if(box){occupied.push({...box,w:width,h:28});label=`<rect class="geo-node-label-bg ${endpoint?'endpoint':''}" x="${box.x}" y="${box.y}" width="${width}" height="28" rx="4"/><text class="geo-node-label" x="${box.x+8}" y="${box.y+19}">${esc(text)}</text>`;}
   }
-  return `<g class="geo-pin" data-node="${esc(n.id)}" role="button" tabindex="0" aria-label="设施 ${esc(n.name)}"><title>${esc(n.name)}</title><circle cx="${x}" cy="${y}" r="11" fill="#fff" fill-opacity=".85"/><circle cx="${x}" cy="${y}" r="5" fill="${n.status==='online'?c:'#89949f'}" stroke="#fff" stroke-width="1.7"/>${label}</g>`;
+  const marker=endpoint?`<circle cx="${x}" cy="${y}" r="13" fill="${drop?'#277768':'#245b85'}" stroke="#fff" stroke-width="3"/><text class="geo-endpoint-glyph" x="${x}" y="${y+5}" text-anchor="middle">${drop?'送':pickup?'取':'始'}</text>`:`<circle cx="${x}" cy="${y}" r="${focus?4:6}" fill="${n.status==='online'?c:'#89949f'}" stroke="#fff" stroke-width="2" opacity="${focus?.55:1}"/>`;
+  return `<g class="geo-pin" data-node="${esc(n.id)}" role="button" tabindex="0" aria-label="设施 ${esc(n.name)}"><title>${esc(n.name)}</title>${marker}${label}</g>`;
  }).join(''):'';
- let units='';if(visible('formations'))for(const u of opts.formations||[]){const n=byId[u.deploy_node];if(!n)continue;const [x,y]=point(n),v=fleet.find(v=>v.id===u.vehicle_id);units+=`<g><rect x="${x-5}" y="${y-25}" width="12" height="12" rx="3" fill="#2b7fbe" stroke="#fff" stroke-width="2"/><text x="${x+10}" y="${y-17}" fill="#1b5c96" font-size="10">${esc(v?.code||u.vehicle_id)}</text></g>`;}
- const positions=opts.telemetry?.vehicles||[];
+ let units='';if(visible('formations'))for(const u of opts.formations||[]){const n=byId[u.deploy_node];if(!n)continue;const [x,y]=point(n),v=fleet.find(v=>v.id===u.vehicle_id);units+=`<g><rect x="${x-5}" y="${y-25}" width="12" height="12" rx="3" fill="#2b7fbe" stroke="#fff" stroke-width="2"/><text x="${x+10}" y="${y-17}" fill="#1b5c96" font-size="12">${esc(v?.code||u.vehicle_id)}</text></g>`;}
+ const glyph=v=>v?.category==='drone'?'<path d="M-7 0h14M0-7v14M-5-5l10 10M5-5l-10 10"/><circle cx="-6" cy="-6" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="6" cy="-6" r="3"/><circle cx="-6" cy="6" r="3"/>':'<rect x="-8" y="-6" width="11" height="9" rx="1"/><path d="M3-3h4l4 4v3H3"/><circle cx="-5" cy="6" r="2"/><circle cx="7" cy="6" r="2"/>';
  const groups=new Map();let moving='';
- for(const v of positions){
-  if((geographic&&(v.lat==null||v.lon==null))||(!geographic&&(v.x==null||v.y==null)))continue;
-  let [x,y]=point(v);const clusterKey=`${Math.round(x/15)}:${Math.round(y/15)}`,offset=groups.get(clusterKey)||0;groups.set(clusterKey,offset+1);if(offset){x+=Math.cos(offset*2.4)*17;y+=Math.sin(offset*2.4)*17;}
-  const chosen=opts.selectedVehicle===v.vehicle_id,c=v.status==='failed'?'#d95855':chosen?'#2169d2':'#1b9391';
-  const glyph=v.category==='drone'?'<path d="M-7 0h14M0-7v14M-5-5l10 10M5-5l-10 10"/><circle cx="-6" cy="-6" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="6" cy="-6" r="3"/><circle cx="-6" cy="6" r="3"/>':'<rect x="-7" y="-5" width="10" height="8" rx="1"/><path d="M3-2h3l3 3v2H3"/><circle cx="-4" cy="5" r="2"/><circle cx="6" cy="5" r="2"/>';
-  moving+=`<g class="geo-moving ${chosen?'is-selected':''}" data-replay-vehicle="${esc(v.vehicle_id)}" role="button" tabindex="0" aria-label="查看平台 ${esc(v.code)}"><title>${esc(v.code)} · ${esc(v.mission_code||'待命')} · ${v.current_speed_kmh} km/h</title><circle cx="${x}" cy="${y}" r="${chosen?22:16}" fill="${c}" fill-opacity=".13"/><circle cx="${x}" cy="${y}" r="12" fill="#fff" stroke="${c}" stroke-width="${chosen?2.7:1.6}"/><g transform="translate(${x} ${y})" fill="none" stroke="${c}" stroke-width="1.3">${glyph}</g>${chosen?`<rect x="${x-38}" y="${y+22}" rx="4" width="76" height="21" fill="${c}"/><text x="${x}" y="${y+36}" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">${esc(v.code)}</text>`:''}</g>`;
+ if(!focus)for(const v of positions){
+  if(v.vehicle_id===opts.selectedVehicle&&hasActor)continue;
+  if((geographic&&(!Number.isFinite(v.lat)||!Number.isFinite(v.lon)))||(!geographic&&(!Number.isFinite(v.x)||!Number.isFinite(v.y))))continue;
+  const [x,y]=point(v),key=`${Math.round(x/22)}:${Math.round(y/22)}`;
+  if(!groups.has(key))groups.set(key,{x,y,vehicles:[]});groups.get(key).vehicles.push(v);
  }
- svg.setAttribute('viewBox',`0 0 ${w} ${h}`);svg.innerHTML=edgeMarkup+nodeMarkup+units+moving;
+ for(const group of groups.values()){
+  const {x,y,vehicles}=group,v=vehicles[0],c=vehicles.some(v=>v.status==='failed')?'#b55148':'#557f98';
+  moving+=`<g class="geo-moving geo-other-vehicle" data-replay-vehicle="${esc(v.vehicle_id)}" role="button" tabindex="0" aria-label="查看平台 ${esc(v.code)}${vehicles.length>1?'，此处共 '+vehicles.length+' 台平台':''}" transform="translate(${x} ${y})"><title>${vehicles.map(v=>esc(v.code)+' · '+esc(v.mission_code||'待命')).join(' / ')}</title><circle r="13" fill="#fff" stroke="${c}" stroke-width="1.5"/>${vehicles.length>1?`<text y="5" text-anchor="middle" class="geo-cluster-count">${vehicles.length}</text>`:`<g fill="none" stroke="${c}" stroke-width="1.4">${glyph(v)}</g>`}</g>`;
+ }
+ svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+ // Keep the selected actor connected to the SVG so its position interpolates smoothly.
+ if(!svg.querySelector('[data-map-layer="network"]'))svg.innerHTML='<g data-map-layer="network"></g><g data-map-layer="route"></g><g data-map-layer="nodes"></g><g data-map-layer="fleet"></g><g data-map-layer="actor"></g>';
+ svg.querySelector('[data-map-layer="network"]').innerHTML=edgeMarkup;
+ svg.querySelector('[data-map-layer="route"]').innerHTML=routeMarkup;
+ svg.querySelector('[data-map-layer="nodes"]').innerHTML=nodeMarkup;
+ svg.querySelector('[data-map-layer="fleet"]').innerHTML=units+moving;
+ const actorLayer=svg.querySelector('[data-map-layer="actor"]');
+ if(hasActor&&selectedVehicle){
+  const [x,y]=actorPoint,c=view?.stage==='failed'?'#b55148':view?.stage==='delivered'?'#277768':'#245b85';
+  let actor=actorLayer.firstElementChild;
+  if(!actor||actor.dataset.replayVehicle!==selectedVehicle.vehicle_id){actorLayer.innerHTML=`<g class="geo-moving is-selected" data-replay-vehicle="${esc(selectedVehicle.vehicle_id)}" role="button" tabindex="0" aria-label="查看平台 ${esc(selectedVehicle.code)}"></g>`;actor=actorLayer.firstElementChild;}
+  const plateWidth=Math.max(96,labelWidth(selectedVehicle.code)),plateX=x+plateWidth+35<w?25:-plateWidth-25;
+  actor.innerHTML=`<title>${esc(selectedVehicle.code)} · ${esc(view?.label||selectedVehicle.status)}</title><circle r="25" fill="${c}" fill-opacity=".13"/><circle r="17" fill="#fff" stroke="${c}" stroke-width="3"/><g fill="none" stroke="${c}" stroke-width="1.7">${glyph(selectedVehicle)}</g><rect x="${plateX}" y="-14" width="${plateWidth}" height="28" rx="4" fill="${c}"/><text class="geo-actor-label" x="${plateX+plateWidth/2}" y="5" text-anchor="middle">${esc(selectedVehicle.code)}</text>`;
+  const projection=[key,camera.zoom,Math.round(left),Math.round(top)].join(':');
+  actor.style.transition=opts.animate&&actor.dataset.projection===projection?'transform 460ms linear':'none';
+  actor.dataset.projection=projection;actor.style.transform=`translate(${x}px,${y}px)`;
+ }else actorLayer.innerHTML='';
  el.querySelector('#geo-city-name').textContent=geographic?`${city?.name||'方案快照'} · 行动区域`:'历史任务 · 虚拟路网';
  el.querySelector('#geo-system').textContent=geographic?'WGS84 / OSM':'SYNTHETIC XY';
  el.querySelector('#geo-coords').textContent=geographic?`${camera.center[0].toFixed(4)}°N, ${camera.center[1].toFixed(4)}°E · Z${camera.zoom}`:'相对坐标网格 · 不代表真实地理位置';

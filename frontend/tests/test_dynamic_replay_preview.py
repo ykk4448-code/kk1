@@ -6,6 +6,7 @@ real backend. The preview may interpolate samples; it may not reuse T+0.
 from pathlib import Path
 import json
 import re
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
 PREVIEW = ROOT / 'preview.html'
@@ -51,3 +52,11 @@ def test_live_playback_does_not_starve_slow_responses():
     assert 'telemetryQueued=true' in assessment
     assert 'telemetryQueued=false' in assessment
     assert 'if(!playing&&Math.abs(minute-at)>.05)' in assessment
+
+
+def test_preview_scripts_have_compatible_global_scope():
+    html = PREVIEW.read_text(encoding='utf-8')
+    scripts = re.findall(r'<script[^>]*>(.*?)</script>', html, re.S)
+    result = subprocess.run(['node', '--check'], input='\n'.join(scripts),
+                            capture_output=True, text=True, encoding='utf-8', timeout=10)
+    assert result.returncode == 0, result.stderr

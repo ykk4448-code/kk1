@@ -1,6 +1,7 @@
 import {get} from './api.js';
 import {esc,icon} from './charts.js';
 import {geoMapMarkup,renderGeoMap} from './map.js';
+import {missionView} from './mission-view.js';
 
 const fmt=(v,d=1)=>v==null?'—':Number(v).toFixed(d);
 const stateNames={standby:'等待任务',in_transit:'运输中',delivered:'已交付',failed:'任务中断',unavailable:'不可用'};
@@ -20,10 +21,11 @@ export function assessmentMarkup(context){
 export function mountAssessment(context){
  const el=document.getElementById('assessment');if(!el)return {destroy(){}};
  const controller=new AbortController();const options={signal:controller.signal};
- let disposed=false,data=null,telemetry=null,selected='',selectedTask='',filter='all',query='',minute=context.minute||0,playing=false,speed=4,timer=0,pending=0,ticket=0,lastError='',layers={facilities:true,links:true,formations:true,routes:true,labels:true};
+ let disposed=false,data=null,telemetry=null,selected='',selectedTask='',mapMode='focus',filter='all',query='',minute=context.minute||0,playing=false,speed=4,timer=0,pending=0,ticket=0,lastError='',layers={facilities:true,links:true,formations:true,routes:true,labels:true};
  const $=q=>el.querySelector(q);
  const currentVehicle=()=>telemetry?.vehicles?.find(v=>v.vehicle_id===selected);
  const selectedMission=()=>data?.timeline.find(t=>t.task_id===selectedTask);
+ const taskView=()=>missionView(selectedMission(),data?.events||[],minute,data?.network.nodes||[]);
  const nodeName=id=>data?.network.nodes.find(n=>n.id===id)?.name||id;
  const maxTime=()=>data?.duration_min||1;
  const xPos=t=>Math.max(0,Math.min(1,t/maxTime()))*100;
@@ -50,14 +52,27 @@ export function mountAssessment(context){
   const v=currentVehicle(),mission=selectedMission();
   if(!v)return '<div class="desk-empty">选择平台查看状态</div>';
   const position=v.coordinate_system==='wgs84'?`${fmt(v.lon,4)}°E<br>${fmt(v.lat,4)}°N`:`X ${fmt(v.x,1)} / Y ${fmt(v.y,1)}<small>历史相对坐标</small>`;
-  return `<div class="inspector-identity"><span class="vehicle-glyph">${icon(v.category==='drone'?'target':'truck',26)}</span><div><b>${safe(v.code)}</b><small>${v.category==='drone'?'无人航空平台':'无人地面平台'}</small></div><span class="state-pill ${v.status}">${stateNames[v.status]||safe(v.status)}</span></div><div class="inspector-position"><span>推演位置</span><b class="mono">${position}</b></div><div class="inspector-metrics"><div><span>当前速度</span><b>${fmt(v.current_speed_kmh)}<small> km/h</small></b></div><div><span>当前载荷</span><b>${fmt(v.current_load_kg)}<small> kg</small></b></div></div><div class="range-status"><div><span>剩余模拟航程</span><b>${fmt(v.remaining_range_km)} km</b></div><div class="range-track"><i style="width:${v.range_remaining_pct}%"></i></div><small>${fmt(v.range_remaining_pct,0)}% · 由计划里程推算</small></div><dl class="inspector-facts"><div><dt>当前任务</dt><dd>${safe(v.mission_code||'尚未派遣')}</dd></div><div><dt>装载物资</dt><dd>${safe(v.cargo||'未装载')}</dd></div><div><dt>预计剩余</dt><dd>${v.eta_min==null?'—':fmt(v.eta_min)+' min'}</dd></div><div><dt>任务进度</dt><dd>${fmt(v.progress_pct,0)}%</dd></div><div><dt>已交付 / 分配</dt><dd>${v.completed_tasks} / ${v.task_count}</dd></div></dl>${mission?`<div class="selected-mission"><small>选中任务 · ${safe(mission.code)}</small><b>${safe(mission.cargo)}</b><p>${safe(nodeName(mission.origin))} → ${safe(nodeName(mission.destination))}</p><div>计划 ${clock(mission.start_min)} — ${clock(mission.end_min)}</div><div>截止 ${clock(mission.deadline_min)} · ${fmt(mission.weight_kg)} kg</div></div>`:''}<p class="inspector-footnote">平台状态由首次迭代事件推算，不是实际设备传感数据。</p>`;
+  return `<div class="inspector-identity"><span class="vehicle-glyph">${icon(v.category==='drone'?'target':'truck',26)}</span><div><b>${safe(v.code)}</b><small>${v.category==='drone'?'无人航空平台':'无人地面平台'}</small></div><span class="state-pill ${v.status}">${stateNames[v.status]||safe(v.status)}</span></div><div class="inspector-position"><span>推演位置</span><b class="mono">${position}</b></div><div class="inspector-metrics"><div><span>当前速度</span><b>${fmt(v.current_speed_kmh)}<small> km/h</small></b></div><div><span>配置载荷</span><b>${fmt(v.current_load_kg)}<small> kg</small></b></div></div><div class="range-status"><div><span>剩余模拟航程</span><b>${fmt(v.remaining_range_km)} km</b></div><div class="range-track"><i style="width:${v.range_remaining_pct}%"></i></div><small>${fmt(v.range_remaining_pct,0)}% · 由计划里程推算</small></div><dl class="inspector-facts"><div><dt>当前任务</dt><dd>${safe(v.mission_code||'尚未派遣')}</dd></div><div><dt>装载物资</dt><dd>${safe(v.cargo||'未装载')}</dd></div><div><dt>预计剩余</dt><dd>${v.eta_min==null?'—':fmt(v.eta_min)+' min'}</dd></div><div><dt>任务进度</dt><dd>${fmt(v.progress_pct,0)}%</dd></div><div><dt>已交付 / 分配</dt><dd>${v.completed_tasks} / ${v.task_count}</dd></div></dl>${mission?`<div class="selected-mission"><small>选中任务 · ${safe(mission.code)}</small><b>${safe(mission.cargo)}</b><p>${safe(nodeName(mission.origin))} → ${safe(nodeName(mission.destination))}</p><div>计划 ${clock(mission.start_min)} — ${clock(mission.end_min)}</div><div>截止 ${clock(mission.deadline_min)} · ${fmt(mission.weight_kg)} kg</div></div>`:''}<p class="inspector-footnote">平台状态由首次迭代事件推算，不是实际设备传感数据。</p>`;
  }
  function fleet(){return (telemetry?.vehicles||[]).map(v=>`<button class="fleet-row ${v.vehicle_id===selected?'selected':''}" data-vehicle="${safe(v.vehicle_id)}" aria-pressed="${v.vehicle_id===selected}"><span class="fleet-dot ${v.status}"></span><span><b>${safe(v.code)}</b><small>${safe(v.mission_code||'待命')}</small></span><span class="fleet-status">${stateNames[v.status]||safe(v.status)}</span><span class="mono">${fmt(v.current_speed_kmh,0)}<small> km/h</small></span></button>`).join('');}
- function drawMap(){renderGeoMap(data.network,context.city,context.plan,{routes:true,layers,telemetry,minute,run:context.run,selectedVehicle:selected,selectedTask,formations:[],onSelectVehicle:selectVehicle});}
- function selectVehicle(id){selected=id;const current=data.timeline.find(t=>t.vehicle_id===id&&taskStatus(t)==='active')||data.timeline.find(t=>t.vehicle_id===id);selectedTask=current?.task_id||'';paintSelection();}
- function paintSelection(){if(disposed||!data)return;$('#desk-inspector').innerHTML=inspector();$('#desk-fleet').innerHTML=fleet();$('#desk-schedule').innerHTML=timeline();drawMap();}
+ function missionSummary(){
+  const mission=selectedMission(),view=taskView();
+  if(!mission||!view)return '<div class="mission-focus-empty">选择左侧任务，查看取货、运输与交付过程。</div>';
+  const stageIndex={pending:0,reposition:1,transport:2,delivered:3,failed:3,unknown:3}[view.stage];
+  const steps=[['等待派遣',mission.actual_start_min],['前往取货点',view.pickupAt],['运送至终点',mission.actual_end_min],['交付完成',mission.actual_end_min]];
+  const here=view.stage==='pending'?`等待 ${clock(mission.actual_start_min)} 派遣`:view.stage==='delivered'?`已送达 ${nodeName(mission.destination)}`:view.stage==='failed'?'任务已中断':view.stage==='unknown'?'缺少交付证据，等待确认':`${view.from?.name||'当前通道'} → ${view.next?.name||nodeName(mission.destination)}`;
+  return `<div class="mission-focus-heading"><div><span class="mission-focus-code">${safe(mission.code)}</span><strong>${safe(mission.cargo)}</strong><span class="mission-focus-platform">${safe(mission.vehicle_code)} · ${fmt(mission.weight_kg,0)} kg</span></div><span class="mission-phase-badge ${view.stage}">${safe(view.label)}</span></div>
+   <div class="mission-endpoints"><div><i>取</i><span><small>取货点</small><b>${safe(nodeName(mission.origin))}</b></span></div><span class="mission-direction">→</span><div><i>送</i><span><small>交付点</small><b>${safe(nodeName(mission.destination))}</b></span></div></div>
+   <ol class="mission-stage-list">${steps.map(([label],i)=>`<li class="${i<stageIndex?'done':i===stageIndex?'current':''} ${i===1&&!view.hasReposition?'skipped':''}"><i>${i<stageIndex?'✓':i+1}</i><span>${i===1&&!view.hasReposition?'已在取货点':i===3&&view.stage==='failed'?'任务中断':i===3&&view.stage==='unknown'?'结果待确认':label}</span></li>`).join('')}</ol>
+   <div class="mission-route-progress"><span>${safe(here)}</span><b>路线 ${fmt(view.progress,0)}%</b><div><i style="width:${view.progress}%"></i></div></div>`;
+ }
+ function updateMission(){const target=$('#desk-mission-focus');if(target)target.innerHTML=missionSummary();el.querySelectorAll('[data-map-mode]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.mapMode===mapMode)));}
+ function drawMap(){renderGeoMap(data.network,context.city,context.plan,{routes:true,layers,telemetry,minute,run:context.run,selectedVehicle:selected,selectedTask,missionView:taskView(),mapMode,animate:playing,formations:[],onSelectVehicle:selectVehicle});}
+ function selectVehicle(id){selected=id;const current=data.timeline.find(t=>t.vehicle_id===id&&taskStatus(t)==='active')||data.timeline.find(t=>t.vehicle_id===id);selectedTask=current?.task_id||'';mapMode='focus';paintSelection();}
+ function paintSelection(){if(disposed||!data)return;$('#desk-inspector').innerHTML=inspector();$('#desk-fleet').innerHTML=fleet();$('#desk-schedule').innerHTML=timeline();updateMission();drawMap();}
  function updateTime(){
   if(!data)return;context.onMinute?.(minute);
+  updateMission();drawMap();
   $('#desk-time').textContent=clock(minute);$('#desk-time-end').textContent=`/ ${fmt(maxTime(),1)} min`;
   const slider=$('#desk-slider');slider.value=minute;slider.style.setProperty('--progress',`${xPos(minute)}%`);
   el.querySelectorAll('.schedule-now').forEach(n=>n.style.left=`${xPos(minute)}%`);
@@ -116,13 +131,13 @@ export function mountAssessment(context){
   const report=data.report,m=data.metrics;
   $('#desk-content').innerHTML=`<div class="desk-kpis"><div><span>当前任务完成率</span><b id="desk-completion">0%</b><small>首次迭代 / 全部任务 ${data.total_tasks} 项</small></div><div><span>累计交付 / 中断</span><b><em id="desk-delivered">0</em><i> / </i><em id="desk-failed">0</em><small>项</small></b><small>随回放时间同步累计</small></div><div><span>执行中平台</span><b><em id="desk-active">${telemetry.active_count}</em><small> / ${telemetry.vehicles.length} 台</small></b><small>来自当前回放时刻</small></div><div><span>多轮平均成功率</span><b>${fmt(m.success_pct)}<small>%</small></b><small>${data.iterations} 轮 · 种子 ${data.seed??'—'}</small></div><div><span>多轮准点率</span><b>${fmt(m.on_time_pct)}<small>%</small></b><small>综合评分 ${fmt(m.score)} / 100</small></div></div>
   <div class="desk-layout"><section class="desk-panel schedule-panel"><header><div><b>运输任务时序</b><small>TRANSPORT SCHEDULE</small></div><span class="panel-counter">${data.timeline.length} 项</span></header><div id="desk-schedule">${timeline()}</div></section>
-  <section class="desk-panel spatial-panel"><header><div><b>投送行动态势</b><small>SPATIAL SITUATION</small></div><span class="live-badge"><i></i> 仿真回放</span></header><div class="desk-map-layers">${[['facilities','设施'],['links','通道'],['routes','路线'],['labels','标注']].map(([k,n])=>`<label><input type="checkbox" data-desk-layer="${k}" checked>${n}</label>`).join('')}<button data-desk="fit" title="适配全部节点">${icon('target',14)} 全域</button></div>${geoMapMarkup()}<div class="map-status-strip"><span><i class="legend-line blue"></i>选中任务路径</span><span><i class="legend-dot teal"></i>运行平台</span><span><i class="legend-dot red"></i>异常平台</span><small>点击平台查看详情</small></div></section>
+  <section class="desk-panel spatial-panel"><header><div><b>配送任务地图</b><small>MISSION ROUTE & PROGRESS</small></div><span class="live-badge"><i></i> 仿真回放</span></header><div class="mission-map-mode" role="group" aria-label="地图显示范围"><button type="button" data-map-mode="focus" aria-pressed="${mapMode==='focus'}">当前任务</button><button type="button" data-map-mode="overview" aria-pressed="${mapMode==='overview'}">全局态势</button><span>选择左侧任务可聚焦路线</span></div><div class="mission-focus" id="desk-mission-focus">${missionSummary()}</div><div class="desk-map-layers">${[['facilities','设施'],['links','通道'],['routes','路线'],['labels','标注']].map(([k,n])=>`<label><input type="checkbox" data-desk-layer="${k}" checked>${n}</label>`).join('')}<button data-desk="fit" title="适配当前显示范围">${icon('target',14)} 适配范围</button></div>${geoMapMarkup()}<div class="map-status-strip mission-route-legend"><span><i class="route-key traveled"></i>已行驶</span><span><i class="route-key remaining"></i>待行驶</span><span><i class="route-key reposition"></i>去取货</span><small>合成通道示意 · 非道路导航轨迹</small></div></section>
   <aside class="desk-panel inspector-panel"><header><div><b>平台运行详情</b><small>PLATFORM INSPECTOR</small></div></header><div id="desk-inspector">${inspector()}</div></aside></div>
   <div class="desk-bottom"><section class="desk-panel trend-panel"><header><div><b>投送结果统计</b><small>DELIVERY RESULTS OVER TIME</small></div><span class="chart-hint">点击曲线可定位时间</span></header>${trend()}</section><section class="desk-panel fleet-panel"><header><div><b>参演平台</b><small>FLEET STATUS</small></div><span class="panel-counter">${telemetry.vehicles.length} 台</span></header><div id="desk-fleet">${fleet()}</div></section></div>
   <div class="desk-player"><button id="desk-play" class="desk-play" data-desk="play" aria-label="播放回放">▶</button><button class="player-step" data-desk="previous" aria-label="上一个事件" title="上一个事件">|◀</button><button class="player-step" data-desk="next" aria-label="下一个事件" title="下一个事件">▶|</button><strong class="mono" id="desk-time">${clock(minute)}</strong><span class="mono" id="desk-time-end">/ ${fmt(maxTime())} min</span><input id="desk-slider" type="range" min="0" max="${maxTime()}" step=".01" value="${minute}" aria-label="评估回放时间"><label class="speed-label">回放速度<select id="desk-speed" aria-label="回放速度"><option value="1">1×</option><option value="4" selected>4×</option><option value="16">16×</option></select></label><button class="player-step" data-desk="reset" aria-label="重置回放" title="重置回放">↺</button></div>
   <div class="desk-event-strip"><div id="desk-event"></div><button id="desk-connection" data-desk="retry">回放数据已同步</button></div><div class="desk-methodology"><span>${icon('shield',13)} ${safe(data.statistics_note)}</span><span>1× = 1 仿真分钟 / 秒 · 航程、速度和载荷为推算值</span></div>
   ${report.totals.unassigned?`<div class="desk-notice">${report.totals.unassigned} 项任务未分配运力，已纳入完成率分母。请在联合投送方案中检查约束。</div>`:''}`;
-  updateTime();drawMap();
+  updateTime();
  }
  async function load(){
   if(!context.run){$('#desk-content').innerHTML='<div class="desk-empty desk-empty-large"><span>◇</span><b>当前想定还没有推演记录</b><p>先在联合投送方案中生成方案，再运行行动推演。结果将自动出现在这里。</p><button class="button button-primary" data-desk="planning">前往方案规划 →</button></div>';return;}
@@ -130,7 +145,8 @@ export function mountAssessment(context){
   catch(error){if(!disposed)$('#desk-content').innerHTML=`<div class="desk-empty desk-empty-large"><b>评估数据加载失败</b><p>${safe(error.message)}</p><button class="button button-primary" data-desk="reload">重试加载</button></div>`;}
  }
  el.addEventListener('click',event=>{
-  const mission=event.target.closest('[data-mission]');if(mission){const row=data.timeline.find(t=>t.task_id===mission.dataset.mission);selected=row.vehicle_id;selectedTask=row.task_id;seek(row.actual_start_min);paintSelection();return;}
+  const mission=event.target.closest('[data-mission]');if(mission){const row=data.timeline.find(t=>t.task_id===mission.dataset.mission);selected=row.vehicle_id;selectedTask=row.task_id;mapMode='focus';seek(row.actual_start_min);paintSelection();return;}
+  const mapModeButton=event.target.closest('[data-map-mode]');if(mapModeButton){mapMode=mapModeButton.dataset.mapMode;updateMission();drawMap();return;}
   const vehicle=event.target.closest('[data-vehicle]');if(vehicle){selectVehicle(vehicle.dataset.vehicle);return;}
   const chart=event.target.closest('[data-time-chart]');if(chart){const bounds=chart.getBoundingClientRect();seek(((event.clientX-bounds.left)/bounds.width*960-44)/873*maxTime());return;}
   const action=event.target.closest('[data-desk]')?.dataset.desk;if(!action)return;
