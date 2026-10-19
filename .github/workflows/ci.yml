@@ -25,5 +25,14 @@ jobs:
           node --check frontend/assets/app.js
           node --check frontend/assets/assessment.js
 
+      - name: Validate design entrypoint
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html=Path('frontend/index.html').read_text()
+          assert html.index('workbench.css') < html.index('design-v5.css')
+          assert Path('frontend/assets/design-v5.css').is_file()
+          assert Path('frontend/tests/test_visual_design_browser.py').is_file()
+          PY
       - name: Build standalone read-only demonstration preview
         run: python scripts/build_preview.py
