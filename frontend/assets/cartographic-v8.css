@@ -1,0 +1,263 @@
+/*
+ * AETHER 8.0 / CARTOGRAPHIC OPERATIONS THEME
+ * Reference direction: maritime-style cartography, sand-colored land, pale-water
+ * blue, high-contrast route red. Original CSS, not copied from reference software.
+ * Loaded last, after the business layouts and previous design layers.
+ * No operational map or navigation claims: positions and paths are simulated.
+ */
+:root {
+  color-scheme:light;
+  --chart-paper:#f7f4e9;
+  --chart-warm:#efecdf;
+  --chart-panel:#fffef9;
+  --chart-sand:#ded7b3;
+  --chart-water:#b9d5d5;
+  --chart-water-deep:#8fbfc7;
+  --chart-grid:#a4bbb8;
+  --chart-ink:#263844;
+  --chart-muted:#5f7077;
+  --chart-border:#cdd5cf;
+  --chart-navy:#2a4d60;
+  --chart-teal:#277a82;
+  --chart-red:#b9433e;
+  --chart-orange:#bd8639;
+  --bg:var(--chart-paper);
+  --nav:#293d46;
+  --surface:var(--chart-panel);
+  --surface2:#f4f2e9;
+  --line:var(--chart-border);
+  --soft:var(--chart-muted);
+  --dim:#738589;
+  --acid:var(--chart-red);
+  --cyan:var(--chart-teal);
+  --blue:var(--chart-navy);
+  --orange:var(--chart-orange);
+  --design-ink:var(--chart-ink);
+  --design-muted:var(--chart-muted);
+  --design-border:var(--chart-border);
+  --design-accent:var(--chart-red);
+  --design-green:var(--chart-teal);
+  --design-paper:var(--chart-paper);
+}
+body{background:var(--chart-paper);color:var(--chart-ink)}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:var(--chart-red)!important;outline-offset:3px}
+::selection{background:#e5c7b4;color:#263844}
+
+/* 一级首页仍严格只有五个业务入口；没有额外的操作按钮。 */
+.shell.portal-mode,.portal-landing{background:linear-gradient(116deg,#f8f5eb 0%,#f5f1e4 54%,#e5e7d8 100%);color:var(--chart-ink)}
+.landing-masthead{border-color:#d6d0bb}
+.landing-logo{background:var(--chart-ink);border-color:var(--chart-ink)}
+.landing-logo span{color:#f5b09a}
+.landing-brand b,.landing-intro h1{color:var(--chart-ink)}
+.landing-brand em{background:#eae5d5;color:#65746e}
+.landing-intro h1 span{color:#477a82}
+.landing-intro:before,.landing-section-head>span:last-child,.landing-number{color:var(--chart-red)!important}
+.landing-intro .overline-line{background:var(--chart-red)!important}
+.landing-intro p,.landing-indicator,.landing-brand small{color:#5d6d71}
+.landing-intro:after{color:#798682;border-color:#d6d0bb}
+.landing-section-head{border-color:#3c5964;color:var(--chart-ink)}
+.landing-modules{border-color:#cbc9ba}
+.landing-module{border-color:#dad5c5;color:var(--chart-ink)}
+.landing-module:hover{background:#e9e5d5!important;border-color:#cec7b6;color:#243f4a}
+.landing-module:active{background:#e1ddcc!important}
+.landing-module-info small{color:#788680}
+.landing-module-arrow{color:var(--chart-red)}
+.landing-footer{color:#73817d;border-color:#d6d0bb}
+
+/* 二级页面采用清晰、低装饰的沙盘业务终端。 */
+.workspace-mode{background:var(--chart-paper)}
+.workspace-mode .rail{background:#293d46;border-color:#23333c;color:#e8efeb}
+.workspace-mode .brand{border-color:#50636a}
+.workspace-mode .brand-mark{background:#b74642;color:#fff;border:0}
+.workspace-mode .rail-heading,.workspace-mode .rail-footer-copy{color:#a6b6b7}
+.workspace-mode .rail-link{color:#c6d4d3}
+.workspace-mode .rail-link:hover{background:#3b525b;color:#fff}
+.workspace-mode .rail-link.selected{background:#42616a;color:#fff;box-shadow:inset 3px 0 var(--chart-red)}
+.workspace-mode .rail-link.selected .rail-step{color:#fff;background:#a94440}
+.workspace-mode .rail-status{background:#304750;border-color:#50656b}
+.workspace-mode .rail-status strong{color:#e8eee9}
+.workspace-mode .topbar{background:#fffcf5;border-color:#d5d2c4}
+.workspace-mode .home-link{color:#a33e3b!important}
+.workspace-mode .page{background:var(--chart-paper)}
+.workspace-mode .page-heading{border-color:#d5d2c4}
+.workspace-mode .page-heading h1,.workspace-mode .card-head h2{color:#253b47}
+.workspace-mode .page-heading p,.workspace-mode .card-head small{color:#66767a}
+.workspace-mode .overline{color:#ac4940}
+.workspace-mode .overline-line{background:#ac4940}
+.workspace-mode .subnav{background:#fffcf7;border-color:#d5d3c8}
+.workspace-mode .subnav-button{color:#617078}
+.workspace-mode .subnav-button.current{background:#e7e7d9;color:#2a5d65;box-shadow:inset 0 -2px #b34e46}
+.workspace-mode .card,.workspace-mode .metric,.workspace-mode .scenario-item,.workspace-mode .archive-row{background:#fffdf7;border-color:#d9d7c8;box-shadow:0 2px 8px #2a3a2810}
+.workspace-mode .card-head{border-color:#e4dfd0}
+.workspace-mode .metric:before{background:var(--chart-red)}
+.workspace-mode .metric-value,.workspace-mode .metric b{color:#294b59}
+.workspace-mode .metric-top,.workspace-mode .metric-bottom{color:#6c7b7a}
+.workspace-mode .metric-icon{background:#edf0e9;color:#537e83}
+.workspace-mode .button-primary{background:var(--chart-red);border-color:var(--chart-red);color:#fff;box-shadow:none}
+.workspace-mode .button-primary:hover{background:#983632;border-color:#983632}
+.workspace-mode .button-ghost,.workspace-mode .button-light{border-color:#d5d6c9;background:#fffdf8;color:#35505a}
+.workspace-mode .button-ghost:hover,.workspace-mode .button-light:hover{border-color:#a9c2bd;background:#f1f3eb}
+input,select,textarea{background:#fffefa;border-color:#cbd1c9;color:#304751}
+input:focus,select:focus,textarea:focus{border-color:#9a8d79;box-shadow:0 0 0 3px #bf9e7c24}
+input[type=checkbox],input[type=range]{accent-color:var(--chart-red)}
+.workspace-mode table th{background:#eeeede;color:#4d676e;border-color:#d9dfd5;font-weight:680}
+.workspace-mode table td{background:#fffefa;color:#3d555c;border-color:#e8e6da}
+.workspace-mode table tbody tr:hover td{background:#f4f1e7}
+.workspace-mode table td b{color:#253d49}
+.workspace-mode .badge{border-color:#d7d9ca}
+
+/* 全国城市地图：保留 OSM 原始图层与 attribution；仅为浏览器展示调色。
+ * 仅以色彩表现示例地图，不能把合成投送路线理解成真实导航路线。 */
+.geo-map,.workspace-mode .geo-map,.assessment .spatial-panel .geo-map{background:#d7ddd1;border-color:#aebeb9}
+.geo-map .geo-grid{background-image:linear-gradient(#638c9230 1px,transparent 1px),linear-gradient(90deg,#638c9230 1px,transparent 1px)!important;background-size:96px 96px!important;opacity:.58}
+.geo-map .geo-tiles{background:#d2d9cb}
+.geo-map .geo-tile{filter:sepia(.15) saturate(.83) hue-rotate(-8deg) contrast(.93) brightness(1.018)}
+.geo-map .geo-overlay{filter:drop-shadow(0 1px 1px #243c4830)}
+.geo-map .geo-city-label{background:#fffbefeb;color:#294959;border:1px solid #bfcac2;box-shadow:0 3px 12px #263c3b1c;backdrop-filter:blur(9px)}
+.geo-map .geo-city-label small{color:#667c82}
+.geo-map .geo-city-label .signal-dot{background:var(--chart-red);box-shadow:0 0 0 3px #b9433e1c}
+.geo-map .geo-controls{border-color:#bac9c3;background:#fffdf3}
+.geo-map .geo-controls button{background:#fffdf3;color:#304f59;border-color:#dce0d4}
+.geo-map .geo-controls button:hover{background:#e6eddf;color:#a13c37}
+.geo-map .geo-scale{background:#fffbefdc;color:#425c64}
+.geo-map .geo-attribution{color:#4e6060;background:#fffaf0dc}
+.geo-map .geo-attribution a{color:#245e69}
+.geo-map.map-offline{background:#e4e4d1}
+.geo-map.map-offline:after{content:'底图瓦片未连接 · 仅显示合成节点与通道';position:absolute;left:12px;bottom:45px;z-index:3;pointer-events:none;font-size:10px;color:#5f7074;background:#fffbeae0;padding:5px 9px;border:1px solid #c5cfc7}
+.geo-map .geo-overlay line[stroke="#286bdb"]{stroke:var(--chart-red);stroke-width:4.3;stroke-opacity:1}
+.geo-map .geo-overlay line[stroke="#5799ba"]{stroke:#ac7060}
+.geo-map .geo-overlay line[stroke="#d95a58"]{stroke:#b72b31}
+.geo-map .geo-overlay line[stroke="#cb9749"]{stroke:#b78534}
+.geo-map .geo-overlay line[stroke="#9dabb8"]{stroke:#70898e}
+.geo-map .geo-overlay .geo-moving.is-selected circle[stroke]{stroke:#fff;stroke-width:3}
+.geo-map .geo-overlay .geo-pin rect{fill:#fffbed;fill-opacity:.96}
+.geo-map .geo-overlay .geo-pin text{fill:#344c50}
+.map-legend,.workspace-mode .map-legend{background:#f5f1e5;color:#465f65;border-color:#d0d7ca}
+.map-status-strip .legend-line.blue{border-color:var(--chart-red)}
+.map-status-strip .legend-dot.teal{background:var(--chart-teal)}
+.map-status-strip .legend-dot.red{background:var(--chart-red)}
+
+/* 重点：同一套任务时序、地图、平台详情、统计和播放器。 */
+.assessment{background:#fffdf7;border-color:#cfd7cf;box-shadow:0 8px 30px #31434a0d;border-radius:6px;--ops-line:#d8ddd1;--ops-ink:#2d4550;--ops-accent:var(--chart-red)}
+.assessment .assessment-toolbar{background:#f5f0df;border-bottom:1px solid #d9dbc9;padding:15px 20px}
+.assessment .desk-title strong{color:#273e4a;font-size:16px}
+.assessment .desk-title small{color:#637578}
+.assessment .desk-symbol{background:#e1dfcc;color:#9c453c;border:1px solid #d4d0bf}
+.assessment .desk-actions select{background:#fffcf2;border-color:#ced2c4;color:#334d55}
+.assessment .desk-kpis{background:#f7f2e4;border-color:#d9d6c5;padding:13px 0}
+.assessment .desk-kpis>div{border-color:#dad9c9}
+.assessment .desk-kpis>div>span{font-size:12px;color:#596c70}
+.assessment .desk-kpis b,.assessment .desk-kpis>div:first-child b{color:#284c5b}
+.assessment .desk-kpis>div:nth-child(2) b{color:#a3453e}
+.assessment .desk-kpis>div>small{color:#73807d}
+.assessment .desk-panel{background:#fffdf8}
+.assessment .desk-panel>header{background:#f1efdf;border-color:#d6d9cb;min-height:53px}
+.assessment .desk-panel>header b{font-size:13px;color:#2a4450}
+.assessment .desk-panel>header small{color:#778487}
+.assessment .panel-counter{background:#e9e7d6;border-color:#d7d8ca;color:#52696b;border-radius:3px}
+.assessment .schedule-panel{background:#fffefa;border-color:#d7dbcb}
+.assessment .schedule-tools{background:#fffdf8}
+.assessment .schedule-tools input,.assessment .schedule-tools select{background:#fffdf9;border-color:#cdd5ca;color:#314b53}
+.assessment .schedule-ruler{background:#ebeede;color:#526c72;border-color:#d1dacd}
+.assessment .schedule-ruler small{color:#536e72;font-weight:600}
+.assessment .schedule-scroll{background:#fffcf3;scrollbar-color:#c4d0c7 transparent}
+.assessment .schedule-row{background:#fffcf5;border-color:#e4e3d6}
+.assessment .schedule-row:hover{background:#f6f0dd}
+.assessment .schedule-row.chosen{background:#f1e9d6;box-shadow:inset 3px 0 var(--chart-red)}
+.assessment .schedule-label b{color:#2f4550;font-size:12px}
+.assessment .schedule-label small{color:#67777a;font-size:11px}
+.assessment .schedule-track{background:repeating-linear-gradient(90deg,transparent,transparent calc(25% - 1px),#cddad3 calc(25% - 1px),#cddad3 25%)}
+.assessment .planned-bar{background:#a7c4c653;border-color:#7fa4aa}
+.assessment .actual-bar{background:#b84d43;min-height:8px}
+.assessment .schedule-row.chosen .actual-bar{background:#9f3035}
+.assessment .actual-bar.interrupted{background:#8c3536}
+.assessment .task-end{background:#b9433e}
+.assessment .incident-mark{color:#a23733}
+.assessment .schedule-legend{background:#f8f6ea;border-color:#d8dccd;color:#576c6c}
+.assessment .spatial-panel,.assessment .spatial-panel>header{background:#e3e5d7}
+.assessment .spatial-panel .geo-map{min-height:480px;background:#d8e0d5}
+.assessment .desk-map-layers{background:#eaf0e3;border-color:#d2dccf;min-height:44px}
+.assessment .desk-map-layers label{color:#405f64;font-size:12px}
+.assessment .desk-map-layers input{accent-color:#b9433e}
+.assessment .desk-map-layers button{color:#964b40}
+.assessment .map-status-strip{background:#f5f0df;border-color:#d9d9c9;color:#485f62}
+.assessment .live-badge{color:#8b413d}
+.assessment .live-badge i{background:#b9433e;box-shadow:0 0 0 4px #b9433e1b}
+.assessment .inspector-panel{background:#fffcf1;border-color:#c0c9bb;box-shadow:0 16px 35px #1f3a3a38}
+.assessment .inspector-panel>header{background:#ede9d9;border-color:#d4d6c6}
+.assessment .inspector-identity{background:#fffdf5}
+.assessment .vehicle-glyph{background:#e7e8dc;border-color:#ced9cc;color:#4a7c81}
+.assessment .inspector-identity b,.assessment .inspector-metrics b{color:#344f57}
+.assessment .state-pill.in_transit{background:#dce9e2;color:#256f66}
+.assessment .state-pill.failed{background:#f4dfd9;color:#a03a35}
+.assessment .state-pill.delivered{background:#dce9e4;color:#2e656f}
+.assessment .range-track{background:#dde4d6}
+.assessment .range-track i{background:#47858b}
+.assessment .inspector-position,.assessment .inspector-facts>div{border-color:#e1e3d8}
+.assessment .desk-bottom{background:#fffdf7;border-color:#d3dbcF}
+.assessment .trend-panel,.assessment .fleet-panel{background:#fffdf8}
+.assessment .trend-legend{color:#556f74}
+.assessment .trend-legend span:first-child i{background:#297f83!important}
+.assessment .trend-legend span:nth-child(2) i{background:#326c87!important}
+.assessment .trend-legend span:nth-child(3) i{background:#c49146!important}
+.assessment .assessment-trend line[stroke="#e6ecf2"]{stroke:#d8e0d4}
+.assessment .assessment-trend polyline[stroke="#178e93"]{stroke:#287f84}
+.assessment .assessment-trend polyline[stroke="#3779ce"]{stroke:#32718f}
+.assessment .assessment-trend polyline[stroke="#db9043"]{stroke:#c18b3d}
+.assessment .assessment-trend text{fill:#5e7376}
+.assessment .fleet-row{background:#fffdf8;border-color:#e7e5d9;color:#456369}
+.assessment .fleet-row:hover{background:#f5f0e4}
+.assessment .fleet-row.selected{background:#f4e8d7;box-shadow:inset 2px 0 #b9433e}
+.assessment .fleet-row b{color:#2e4a55}
+.assessment .fleet-row small{font-size:10px;color:#708486}
+.assessment .desk-play{background:#bd4b44;color:#fff}
+.assessment .desk-play:hover{background:#983a35}
+.assessment .desk-player{background:#2b4856;color:#f7f3e7;border-color:#233b47}
+.assessment .desk-player>strong{color:#fffdf5}
+.assessment .desk-player>span,.assessment .speed-label{color:#c1d7d7}
+.assessment #desk-slider{background:linear-gradient(to right,#df796a var(--progress),#78929b var(--progress))}
+.assessment #desk-slider::-webkit-slider-thumb{background:#bd4b44;border-color:#ffece0;box-shadow:0 0 0 1px #8e4c48}
+.assessment .player-step{color:#ecf0e9}
+.assessment .speed-label select{background:#f2f1e5;color:#244650;border-color:#92aaac}
+.assessment .desk-event-strip{background:#fff9e8;color:#4f6367;border-color:#ddd8c7}
+.assessment #desk-connection{color:#397a77}
+.assessment .ops-v7-header{background:#f2eedf;border-color:#d9dbc9}
+.assessment .ops-v7-heading{background:#f4f0e4}
+.assessment .ops-v7-heading h3{color:#2b4856}
+.assessment .ops-v7-heading small{color:#926053}
+.assessment .ops-v7-tools input,.assessment .ops-v7-tools select{background:#fffdf6;border-color:#cbd5c9}
+.assessment .ops-event-v7{border-color:#e0dfd1;background:#fffdf6}
+.assessment .ops-event-v7:hover{background:#f4ecda;border-color:#bf9a7b}
+.assessment .ops-event-v7.is-current{background:#f4e7d2;border-color:#b94f46}
+.assessment .ops-v7-bar{background:#dfe3d3}
+.assessment .ops-v7-bar i{background:#b94f46}
+.assessment .ops-v7-action{color:#9c423d}
+
+/* Readable at every width: avoid tiny text and unintentional horizontal overflow. */
+@media(max-width:1200px){
+ .assessment .desk-layout{min-height:0}
+ .assessment .spatial-panel .geo-map{height:430px;min-height:430px}
+}
+@media(max-width:830px){
+ .assessment .inspector-panel{background:#fffcf4}
+ .assessment .desk-player{background:#2b4856}
+ .assessment .spatial-panel .geo-map{height:380px;min-height:380px}
+}
+@media(max-width:580px){
+ .assessment .assessment-toolbar{gap:12px}
+ .assessment .desk-kpis>div>span{font-size:11px;white-space:normal}
+ .assessment .spatial-panel .geo-map{height:310px;min-height:310px}
+ .assessment .desk-map-layers{padding:9px 10px;gap:10px}
+ .assessment .desk-map-layers label{font-size:11px}
+ .assessment .map-status-strip{gap:8px}
+ .assessment .desk-player{padding:12px 10px}
+ .landing-intro p{color:#5b706e}
+}
+@media(prefers-reduced-motion:reduce){
+ .landing-module,.workspace-mode .button{transition:none!important}
+}
+@media print{
+ body{background:white;color:#111}
+ .assessment .desk-player,.workspace-mode .rail{display:none!important}
+ .assessment,.assessment .desk-panel{border-color:#999;color:#111;background:white}
+}

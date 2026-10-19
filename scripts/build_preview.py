@@ -44,6 +44,7 @@ html=html.replace('<link rel="stylesheet" href="/assets/workbench.css">','<style
 html=html.replace('<link rel="stylesheet" href="/assets/design-v5.css">','<style>'+(ROOT/'frontend/assets/design-v5.css').read_text(encoding='utf-8')+'</style>')
 html=html.replace('<link rel="stylesheet" href="/assets/mission-v6.css">','<style>'+(ROOT/'frontend/assets/mission-v6.css').read_text(encoding='utf-8')+'</style>')
 html=html.replace('<link rel="stylesheet" href="/assets/mission-v7.css">','<style>'+(ROOT/'frontend/assets/mission-v7.css').read_text(encoding='utf-8')+'</style>')
+html=html.replace('<link rel="stylesheet" href="/assets/cartographic-v8.css">','<style>'+(ROOT/'frontend/assets/cartographic-v8.css').read_text(encoding='utf-8')+'</style>')
 # Frontend sources are ES modules. In preview only, flatten imports and exports
 # into one classic script. This is a read-only rendering snapshot, not product code.
 chunks=[]
