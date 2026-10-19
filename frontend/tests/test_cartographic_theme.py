@@ -16,7 +16,7 @@ def test_theme_loads_last():
     assert INDEX.index('mission-v7.css')<INDEX.index('design-v5.css')<INDEX.index('cartographic-v8.css')
     assert 'cartographic-v8.css' in PREVIEW
 def test_palette_contrast():
-    colors=dict(re.findall(r'--(chart-[\\w-]+)\\s*:\\s*(#[0-9a-f]{6})',CSS))
+    colors=dict(re.findall(r'--(chart-[\w-]+)\s*:\s*(#[0-9a-f]{6})',CSS))
     assert ratio(colors['chart-ink'],colors['chart-paper'])>=7
     assert ratio(colors['chart-muted'],colors['chart-paper'])>=4.5
     assert ratio('#ffffff',colors['chart-red'])>=4.5
