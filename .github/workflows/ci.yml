@@ -46,3 +46,5 @@ jobs:
         run: pytest frontend/tests/test_engineering_theme.py -q
       - name: Build standalone read-only demonstration preview
         run: python scripts/build_preview.py
+      - name: Verify time-dependent movement in standalone preview
+        run: pytest frontend/tests/test_dynamic_replay_preview.py -q
