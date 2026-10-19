@@ -36,6 +36,29 @@ with TestClient(app) as client:
             paths.append(f"/simulations/{run['id']}/assessment?minute=0.000")
     paths.append('/audit?limit=100')
     fixtures={path:client.get('/api/v1'+path,headers=headers).json() for path in paths}
+    # A read-only preview needs TIME-DEPENDENT synthetic telemetry, not the
+    # old T+0 response for every request. Sample server-calculated trajectories
+    # along with event boundaries. The client interpolates between samples.
+    replay_frames={}
+    for scen in scenes:
+        runs=client.get('/api/v1/simulations',headers=headers,params={'scenario_id':scen['id']}).json()
+        for run in runs:
+            rid=run['id']
+            snapshot=fixtures.get(f'/simulations/{rid}/assessment?minute=0.000')
+            if not snapshot:
+                continue
+            duration=float(snapshot.get('duration_min') or 1)
+            # Regular samples plus exact event boundaries preserve discrete
+            # departures, arrivals and disruptions in the preview.
+            minutes={round(duration*i/90,3) for i in range(91)}
+            minutes.update(round(float(e['at_min']),3) for e in snapshot.get('events',[])
+                           if e.get('kind') in {'dispatch','arrived','failed','warning'} and e.get('at_min') is not None)
+            replay_frames[rid]=[]
+            for minute in sorted(t for t in minutes if 0<=t<=duration+.001):
+                reply=client.get(f'/api/v1/simulations/{rid}/telemetry',headers=headers,params={'minute':minute})
+                reply.raise_for_status()
+                replay_frames[rid].append(reply.json())
+
 
 html=(ROOT/'frontend/index.html').read_text(encoding='utf-8')
 css=(ROOT/'frontend/assets/styles.css').read_text(encoding='utf-8')
@@ -56,15 +79,60 @@ for name in ['api.js','charts.js','map.js','assessment.js','app.js']:
     js=re.sub(r'\bexport\s+(?=async|const|function|class|let)', '', js)
     chunks.append(js)
 prelude='''const MOCK_PAYLOAD=__JSON__;
+const MOCK_FRAMES=__FRAMES__;
+// Preview-only interpolation of server-generated synthetic telemetry samples.
+// Live deployments always request the actual /telemetry endpoint.
+function previewTelemetry(path){
+  const [base,query='']=path.split('?');
+  if(!base.startsWith('/simulations/')||!base.endsWith('/telemetry'))return undefined;
+  const rid=base.split('/')[2],frames=MOCK_FRAMES[rid];
+  if(!frames||!frames.length)return undefined;
+  const requested=Number(new URLSearchParams(query).get('minute')||0);
+  const t=Math.min(frames[frames.length-1].minute,Math.max(0,Number.isFinite(requested)?requested:0));
+  let low=0,high=frames.length-1;
+  while(high-low>1){const mid=(low+high)>>1;if(frames[mid].minute<=t)low=mid;else high=mid;}
+  const a=frames[low],b=frames[high];
+  if(t>=b.minute)low=high;
+  const left=frames[low],right=frames[Math.min(low+1,frames.length-1)];
+  const out=structuredClone(left);
+  const span=right.minute-left.minute,blend=span>0?Math.max(0,Math.min(1,(t-left.minute)/span)):0;
+  if(blend>0&&blend<1){
+    const nextById=new Map(right.vehicles.map(v=>[v.vehicle_id,v]));
+    for(const vehicle of out.vehicles){
+      const next=nextById.get(vehicle.vehicle_id);
+      // Do not interpolate across dispatch, task, outcome or failure changes.
+      if(!next||vehicle.status!=='in_transit'||next.status!=='in_transit'||vehicle.task_id!==next.task_id)continue;
+      for(const key of ['lat','lon','x','y','current_speed_kmh','current_load_kg','remaining_range_km','range_remaining_pct','eta_min','progress_pct']){
+        if(typeof vehicle[key]==='number'&&typeof next[key]==='number')
+          vehicle[key]=Number((vehicle[key]+(next[key]-vehicle[key])*blend).toFixed(key==='lat'||key==='lon'?6:2));
+      }
+    }
+  }
+  out.minute=Number(t.toFixed(2));
+  out.active_count=out.vehicles.filter(v=>v.status==='in_transit').length;
+  out.position_note='离线预览：基于后端生成的仿真时刻样本插值；非实时设备数据';
+  return out;
+}
 window.fetch=async function(url,options={}){
   const path=String(url).replace(/^\\/api\\/v1/,'');
   if(path==='/auth/login')return {ok:true,status:200,json:async()=>({access_token:'preview-token',user:{username:'admin',role:'admin'}})};
   if(path==='/auth/me')return {ok:true,status:200,json:async()=>({username:'admin',role:'admin'})};
-  const data=MOCK_PAYLOAD[path] ?? (path.includes('/telemetry?minute=')?MOCK_PAYLOAD[path.split('?')[0]+'?minute=0.00']:(path.includes('/assessment?minute=')?MOCK_PAYLOAD[path.split('?')[0]+'?minute=0.000']:undefined));
+  let data;
+  if(path.includes('/telemetry?minute=')){
+    data=previewTelemetry(path);
+  }else if(path.includes('/assessment?minute=')){
+    const [base,query='']=path.split('?');
+    const minute=new URLSearchParams(query).get('minute')||'0';
+    const fixture=MOCK_PAYLOAD[base+'?minute=0.000'];
+    if(fixture){data=structuredClone(fixture);data.telemetry=previewTelemetry(base.replace('/assessment','/telemetry')+'?minute='+minute);}
+  }else{
+    data=MOCK_PAYLOAD[path];
+  }
   if(data===undefined)return {ok:false,status:501,json:async()=>({detail:'离线预览为只读快照，请启动正式服务执行写操作'})};
   return {ok:true,status:200,json:async()=>structuredClone(data)};
 };'''
 prelude=prelude.replace('__JSON__',json.dumps(fixtures,ensure_ascii=False,separators=(',',':')))
+prelude=prelude.replace('__FRAMES__',json.dumps(replay_frames,ensure_ascii=False,separators=(',',':')))
 js=prelude+'\n'+'\n'.join(chunks)
 html=html.replace('<script type="module" src="/assets/app.js"></script>','<script>'+js+'</script>')
 mission_js=(ROOT/'frontend/assets/mission-v7.js').read_text(encoding='utf-8').replace("import {get} from './api.js';",'').replace('export function ','function ')
