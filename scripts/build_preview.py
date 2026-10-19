@@ -43,6 +43,7 @@ html=html.replace('<link rel="stylesheet" href="/assets/styles.css">','<style>'+
 html=html.replace('<link rel="stylesheet" href="/assets/workbench.css">','<style>'+(ROOT/'frontend/assets/workbench.css').read_text(encoding='utf-8')+'</style>')
 html=html.replace('<link rel="stylesheet" href="/assets/design-v5.css">','<style>'+(ROOT/'frontend/assets/design-v5.css').read_text(encoding='utf-8')+'</style>')
 html=html.replace('<link rel="stylesheet" href="/assets/mission-v6.css">','<style>'+(ROOT/'frontend/assets/mission-v6.css').read_text(encoding='utf-8')+'</style>')
+html=html.replace('<link rel="stylesheet" href="/assets/mission-v7.css">','<style>'+(ROOT/'frontend/assets/mission-v7.css').read_text(encoding='utf-8')+'</style>')
 # Frontend sources are ES modules. In preview only, flatten imports and exports
 # into one classic script. This is a read-only rendering snapshot, not product code.
 chunks=[]
@@ -63,8 +64,8 @@ window.fetch=async function(url,options={}){
 prelude=prelude.replace('__JSON__',json.dumps(fixtures,ensure_ascii=False,separators=(',',':')))
 js=prelude+'\n'+'\n'.join(chunks)
 html=html.replace('<script type="module" src="/assets/app.js"></script>','<script>'+js+'</script>')
-mission_js=(ROOT/'frontend/assets/mission-v6.js').read_text(encoding='utf-8').replace("import {get} from './api.js';",'')
-html=html.replace('<script type="module" src="/assets/mission-v6.js"></script>','<script>'+mission_js+'</script>')
+mission_js=(ROOT/'frontend/assets/mission-v7.js').read_text(encoding='utf-8').replace("import {get} from './api.js';",'').replace('export function ','function ')
+html=html.replace('<script type="module" src="/assets/mission-v7.js"></script>','<script>'+mission_js+'</script>')
 html=html.replace('<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">','')
 out=ROOT/'preview.html'
 out.write_text(html,encoding='utf-8')

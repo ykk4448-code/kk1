@@ -25,6 +25,7 @@ jobs:
           node --check frontend/assets/app.js
           node --check frontend/assets/assessment.js
           node --check frontend/assets/mission-v6.js
+          node --check frontend/assets/mission-v7.js
 
       - name: Validate design entrypoint
         run: |
@@ -36,6 +37,6 @@ jobs:
           assert Path('frontend/tests/test_visual_design_browser.py').is_file()
           PY
       - name: Validate mission console UI integration
-        run: pytest frontend/tests/test_mission_console_contract.py -q
+        run: pytest frontend/tests/test_mission_console_contract.py frontend/tests/test_mission_v7_contract.py -q
       - name: Build standalone read-only demonstration preview
         run: python scripts/build_preview.py
