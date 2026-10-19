@@ -4,10 +4,21 @@ let token = sessionStorage.getItem('aether_token') || '';
 let user = null;
 
 export async function request(path, options = {}) {
-  const response = await fetch(ORIGIN + path, {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.method === 'POST' ? 90000 : 20000);
+  let response;
+  try {
+    response = await fetch(ORIGIN + path, {
     ...options,
+    signal: controller.signal,
     headers: { 'Content-Type':'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) }
-  });
+    });
+  } catch (error) {
+    if (error.name === 'AbortError') throw new Error('请求超时，请检查本地服务后重试');
+    throw new Error('无法连接本地服务，请确认服务正在运行');
+  } finally {
+    clearTimeout(timeout);
+  }
   let data;
   try { data = await response.json(); } catch { data = null; }
   if (!response.ok) {

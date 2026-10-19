@@ -32,86 +32,7 @@ def _get_source(run: dict, plan: dict):
     return snapshot, plan.get('assignment_data') or [], run.get('events') or []
 
 
-def telemetry_at(run: dict, plan: dict, minute: float) -> dict:
-    """Interpolated synthetic position and mission state at a replay timestamp.
-
-    Uses first iteration's immutable event trace; other Monte Carlo iterations are
-    statistics, not independent position histories. Speed/load are inferred from
-    planned segments, and are not real sensor readings.
-    """
-    if minute < 0 or minute > 100000:
-        raise ValueError('invalid replay time')
-    snapshot, assignments, events = _get_source(run, plan)
-    nodes = {n['id']: n for n in snapshot.get('nodes', [])}
-    vehicles = snapshot.get('vehicles', [])
-    tasks = {t['id']: t for t in snapshot.get('tasks', [])}
-    by_vehicle = defaultdict(list)
-    events_by_task = defaultdict(list)
-    for a in assignments:
-        by_vehicle[a['vehicle_id']].append(a)
-    for ev in events:
-        events_by_task[ev.get('code')].append(ev)
-    for items in by_vehicle.values():
-        items.sort(key=lambda a: (a['start_min'], a['code']))
-    result = []
-    for vehicle in vehicles:
-        vid = vehicle['id']
-        missions = by_vehicle.get(vid, [])
-        pos_id = vehicle['home_node']
-        status = 'standby' if vehicle['status'] == 'available' else 'unavailable'
-        cargo, code, speed, loaded, remaining, eta, completed = '', '', 0., 0., vehicle['range_km'], None, 0
-        for a in missions:
-            ev = events_by_task.get(a['code'], [])
-            starts = [e['at_min'] for e in ev if e.get('kind') == 'dispatch']
-            ends = [e for e in ev if e.get('kind') in ('arrived', 'failed')]
-            start = starts[0] if starts else a['start_min']
-            end = ends[0]['at_min'] if ends else a['end_min']
-            if minute < start:
-                break
-            if minute >= end:
-                pos_id = a['destination'] if not ends or ends[0]['kind'] == 'arrived' else (a['path_nodes'][-2] if len(a['path_nodes'])>1 else a['origin'])
-                status = 'delivered' if not ends or ends[0]['kind'] == 'arrived' else 'failed'
-                completed += status == 'delivered'
-                remaining = max(0., remaining - a['distance_km'])
-                code = a['code']; cargo = ''
-                continue
-            status = 'in_transit'; code = a['code']; cargo = a['cargo']
-            loaded = float(tasks.get(a['task_id'], {}).get('weight_kg', a.get('weight_kg', 0)))
-            speed = round(a['distance_km'] / max(end-start, .1) * 60, 1)
-            p = min(1., max(0., (minute-start)/max(end-start,.1)))
-            remaining = round(max(0., remaining-a['distance_km']*p), 2)
-            eta = round(max(0.,end-minute),1)
-            points = sorted((e for e in ev if e.get('kind') == 'position' and e.get('node') in nodes), key=lambda e: e['at_min'])
-            if points:
-                earlier = max((i for i,e in enumerate(points) if e['at_min']<=minute),default=0)
-                left = points[earlier]
-                right = points[min(earlier+1,len(points)-1)]
-                loc_a = nodes[left['node']];loc_b=nodes[right['node']]
-                ratio = min(1,max(0,(minute-left['at_min'])/max(right['at_min']-left['at_min'],.001)))
-                lat = loc_a['lat']+(loc_b['lat']-loc_a['lat'])*ratio
-                lon = loc_a['lon']+(loc_b['lon']-loc_a['lon'])*ratio
-                pos_id=left['node']
-            else:
-                pos_id = a['origin']
-                lat = nodes.get(pos_id, {}).get('lat')
-                lon = nodes.get(pos_id, {}).get('lon')
-            break
-        else:
-            lat=lon=None
-        # If replay time is before the first active mission, or after completion,
-        # position equals the last confirmed synthetic facility.
-        if status != 'in_transit':
-            lat = nodes.get(pos_id, {}).get('lat')
-            lon = nodes.get(pos_id, {}).get('lon')
-        result.append({'vehicle_id':vid,'code':vehicle['code'],'name':vehicle['name'],
-            'status':status,'mission_code':code,'cargo':cargo,
-            'current_speed_kmh':speed,'current_load_kg':loaded,
-            'remaining_range_km':round(remaining,2),'eta_min':eta,
-            'lat':round(lat,6) if lat is not None else None,
-            'lon':round(lon,6) if lon is not None else None,
-            'node_id':pos_id,'completed_tasks':completed})
-    return {'run_id':run['id'],'minute':round(minute,2),'source':'first_iteration_synthetic_events',
-            'vehicles':result,'active_count':sum(x['status']=='in_transit' for x in result)}
+from .replay import telemetry_at  # Public compatibility import.
 
 
 def delivery_report(run: dict, plan: dict) -> dict:
@@ -146,7 +67,8 @@ def delivery_report(run: dict, plan: dict) -> dict:
          'delivered':sum(d['status']=='delivered' for d in deliveries),
          'failed':sum(d['status']=='failed' for d in deliveries),
          'on_time':sum(d['on_time'] for d in deliveries),
-         'weight_kg':round(sum((d['weight_kg'] or 0) for d in deliveries if d['status']=='delivered'),2),
+         'weight_kg': (None if any(d['weight_kg'] is None for d in deliveries if d['status']=='delivered') else round(sum(d['weight_kg'] for d in deliveries if d['status']=='delivered'),2)),
+         'unknown_weight_count':sum(d['weight_kg'] is None for d in deliveries if d['status']=='delivered'),
          'distance_km':round(sum(d['distance_km'] for d in deliveries),2)},
        'transport':transport,'deliveries':deliveries,'unassigned':unassigned,
        'metrics':run.get('metrics',{})}

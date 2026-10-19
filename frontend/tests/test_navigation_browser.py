@@ -30,7 +30,7 @@ with sync_playwright() as p:
     assert page.locator('.topbar:visible').count() == 0
     for module, initial_tab in [('data','nodes'), ('scenario','list'),
                                 ('planning','workspace'), ('simulation','control'),
-                                ('analytics','transport')]:
+                                ('analytics','overview')]:
         page.locator(f'.landing-module[data-page="{module}"]').click()
         assert page.evaluate('location.hash') == f'#/{module}/{initial_tab}'
         assert page.locator('.rail-link.selected').count() == 1
@@ -47,7 +47,7 @@ with sync_playwright() as p:
     page.set_viewport_size({'width':390,'height':844})
     assert page.locator('button:visible').count() == 5
     page.locator('.landing-module[data-page="analytics"]').click()
-    assert page.locator('.subnav-button:visible').count() == 5
+    assert page.locator('.subnav-button:visible').count() == 6
     assert not errors, errors
     browser.close()
 print('Five primary destinations and secondary navigation: PASS')

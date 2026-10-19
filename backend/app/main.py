@@ -17,6 +17,7 @@ from .security import current_user, can_edit, can_admin, verify_password, sign_t
 from .seed import seed_database
 from .config import DEMO_MODE, CORS_ORIGINS
 from .cities import CITIES
+from .replay import assessment_projection
 from .migration import upgrade_schema
 from .operations import normalize_configuration, scenario_vehicles, telemetry_at, delivery_report
 
@@ -33,7 +34,7 @@ async def lifespan(_app: FastAPI):
                 raise RuntimeError('Production cannot start while the demo admin password is active')
     yield
 
-app = FastAPI(title='Aether Route · 无人投送仿真平台', version='3.0.0',
+app = FastAPI(title='Aether Route · 无人投送仿真平台', version='4.0.0',
               description='A*-Sim synthetic logistics mission planning and Monte Carlo simulation',
               lifespan=lifespan)
 app.add_middleware(CORSMiddleware,allow_origins=CORS_ORIGINS,allow_credentials=False,
@@ -89,7 +90,7 @@ def note(db:Session, user:m.User, action:str, subject:str, details:dict|None=Non
 
 @app.get(f'{PREFIX}/health')
 def health():
-    return {'status':'ok','service':'aether-route','version':'3.0.0','demo_mode':DEMO_MODE}
+    return {'status':'ok','service':'aether-route','version':'4.0.0','demo_mode':DEMO_MODE}
 
 @app.post(f'{PREFIX}/auth/login')
 def login(body:s.LoginIn,db:Session=Depends(get_db)):
@@ -372,6 +373,14 @@ def simulation_report(run_id:str,db:Session=Depends(get_db),_user:m.User=Depends
     plan=lookup(db,m.Plan,run.plan_id)
     return delivery_report({'id':run.id,'iterations':run.iterations,'events':run.events,'metrics':run.metrics},
        {'id':plan.id,'assignment_data':plan.assignment_data,'summary_data':plan.summary_data,'snapshot_data':plan.snapshot_data})
+
+@app.get(f'{PREFIX}/simulations/{{run_id}}/assessment')
+def assessment(run_id:str,minute:float=Query(default=0,ge=0,le=100000),db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
+    run=lookup(db,m.SimulationRun,run_id)
+    plan=lookup(db,m.Plan,run.plan_id)
+    return assessment_projection(
+        {'id':run.id,'events':run.events,'metrics':run.metrics,'iterations':run.iterations,'seed':run.seed},
+        {'id':plan.id,'assignment_data':plan.assignment_data,'summary_data':plan.summary_data,'snapshot_data':plan.snapshot_data},minute)
 
 @app.get(f'{PREFIX}/analytics/compare')
 def compare(ids:str=Query(min_length=1,max_length=1000),db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
