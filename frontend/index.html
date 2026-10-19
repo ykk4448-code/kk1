@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#09111b" />
+  <meta name="description" content="凌航 AETHER — 多平台无人运输网络规划、行动推演及统计评估工作台。" />
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <title>凌航 AETHER | 无人投送仿真决策平台</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <div class="app-shell" id="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-symbol"><svg viewBox="0 0 50 50" fill="none" aria-hidden="true"><path d="M25 4 45 15.5v19L25 46 5 34.5v-19L25 4Z" stroke="currentColor" stroke-width="1.5"/><path d="m14 33 11-20 11 20M19.4 25.5h11.2" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></div>
+        <div><div class="brand-word">AETHER <span>SIM</span></div><div class="brand-caption">凌航 · 智能仿真平台</div></div>
+      </div>
+      <div class="side-label">MISSION CONTROL <span>01</span></div>
+      <nav aria-label="主导航" id="nav"></nav>
+      <div class="side-label side-label-second">SYSTEM MONITOR <span>02</span></div>
+      <div class="sidebar-aux"><span class="micro-dot"></span><span>仿真引擎 A*-SIM v1.0</span><span class="version-pill">READY</span></div>
+      <div class="sidebar-bottom"><div class="pulse-dot"></div><div><strong>所有系统运行正常</strong><small>演示环境 / SYNTHETIC DATA</small></div></div>
+      <div class="sidebar-footer"><span>© 2026 AETHER LAB</span><span>BUILD 1.0.0</span></div>
+    </aside>
+
+    <div class="main-frame">
+      <header class="topbar">
+        <div class="crumb"><button class="mobile-menu" id="menu-toggle" aria-label="打开导航">☰</button><span class="crumb-home">AETHER / WORKSPACE</span><span class="slash">/</span><span id="breadcrumb">任务态势总览</span></div>
+        <div class="top-actions"><div class="top-clock"><span class="blink-dot"></span> SIMULATION ENVIRONMENT</div><span class="top-divider"></span><span class="today" id="today"></span><div class="avatar" title="演示管理员">AD</div></div>
+      </header>
+      <main class="main" id="main"><div class="loading-screen"><span class="spinner"></span> 正在初始化仿真工作空间…</div></main>
+    </div>
+  </div>
+  <div class="toast-stack" id="toast-stack" role="status" aria-live="polite"></div>
+  <div class="modal-root" id="modal-root"></div>
+  <script type="module" src="/assets/app.js"></script>
+</body>
+</html>

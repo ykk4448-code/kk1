@@ -1,0 +1,20 @@
+services:
+  aether:
+    build: .
+    container_name: aether-route
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"  # demo mode is localhost-only
+    environment:
+      DEMO_MODE: "true"  # NEVER use the demo login on a public server
+      DATABASE_URL: "sqlite:////app/data/aether.db"
+    volumes:
+      - aether-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+volumes:
+  aether-data:

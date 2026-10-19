@@ -1,0 +1,24 @@
+name: AETHER CI
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: pip install -r backend/requirements-dev.txt
+      - name: Test API and planning engine
+        run: PYTHONPATH=backend pytest backend/tests -q
+      - name: Validate frontend module syntax
+        run: |
+          node --check frontend/assets/api.js
+          node --check frontend/assets/charts.js
+          node --check frontend/assets/app.js
