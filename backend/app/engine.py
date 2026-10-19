@@ -107,7 +107,7 @@ def generate_plan(nodes: list[dict], edges: list[dict], vehicles: list[dict], ta
         path_nodes = reposition['nodes'] + delivery['nodes'][1:]
         path_edges = reposition['edges'] + delivery['edges']
         record = {'task_id':task['id'],'code':task['code'],'cargo':task['cargo'],'vehicle_id':vehicle['id'],
-                  'vehicle_code':vehicle['code'],'origin':task['origin'],'destination':task['destination'],
+                  'vehicle_code':vehicle['code'],'weight_kg':task['weight_kg'],'origin':task['origin'],'destination':task['destination'],
                   'path_nodes':path_nodes,'path_edges':path_edges,'reposition_nodes':reposition['nodes'],
                   'start_min':round(start_min,2),'end_min':round(arrival,2),
                   'duration_min':round(minutes,2),'distance_km':round(distance,2),

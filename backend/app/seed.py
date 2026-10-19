@@ -74,7 +74,8 @@ def seed_database(db: Session):
         plan_data=generate_plan(nodes,edges,vehicles,tasks,sd,'balanced','astar')
         plan=m.Plan(id=f'PLN-DEMO-{idx:03}',scenario_id=scen.id,name=f'{scen.name} · 初始基线',
             strategy='balanced',algorithm='astar',assignment_data=plan_data['assignments'],summary_data=plan_data['summary'],
-            snapshot_data={'scenario':sd,'nodes':nodes,'edges':edges,'vehicles':vehicles})
+            snapshot_data={'scenario':sd,'nodes':nodes,'edges':edges,'vehicles':vehicles,'tasks':tasks,
+                           'configuration':{'objective':'城市应急保障基线方案','units':[{'vehicle_id':v['id'],'deploy_node':v['home_node']} for v in vehicles], 'layers':{}}})
         db.add(plan);db.flush()
         result=simulate(plan_data,sd,vehicles,nodes,edges,seed=2026+idx,iterations=80)
         db.add(m.SimulationRun(id=f'RUN-DEMO-{idx:03}',plan_id=plan.id,scenario_id=scen.id,

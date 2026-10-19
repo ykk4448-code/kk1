@@ -105,6 +105,24 @@ class ScenarioOut(ORMModel):
     status: str
     created_at: datetime
 
+class FormationUnit(BaseModel):
+    vehicle_id: str = Field(min_length=2, max_length=40)
+    deploy_node: str = Field(min_length=2, max_length=40)
+
+class MapLayers(BaseModel):
+    facilities: bool = True
+    links: bool = True
+    formations: bool = True
+    routes: bool = True
+    labels: bool = True
+    model_config = ConfigDict(extra='forbid')
+
+class ConfigurationPatch(BaseModel):
+    objective: str | None = Field(default=None, max_length=1000)
+    units: list[FormationUnit] | None = Field(default=None, max_length=100)
+    layers: MapLayers | None = None
+    model_config = ConfigDict(extra='forbid')
+
 class TaskIn(BaseModel):
     cargo: str = Field(min_length=2, max_length=90)
     weight_kg: float = Field(gt=0, le=5000)

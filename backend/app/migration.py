@@ -8,7 +8,7 @@ from .database import engine
 
 ADD_COLUMNS={
     'nodes': {'city_id': "VARCHAR(30) NOT NULL DEFAULT 'wuhan'", 'lon': 'FLOAT NOT NULL DEFAULT 114.3', 'lat': 'FLOAT NOT NULL DEFAULT 30.58'},
-    'scenarios': {'city_id': "VARCHAR(30) NOT NULL DEFAULT 'wuhan'"},
+    'scenarios': {'city_id': "VARCHAR(30) NOT NULL DEFAULT 'wuhan'", 'configuration_data': "JSON NOT NULL DEFAULT '{}'"},
 }
 
 def upgrade_schema():

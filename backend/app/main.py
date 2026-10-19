@@ -18,6 +18,7 @@ from .seed import seed_database
 from .config import DEMO_MODE, CORS_ORIGINS
 from .cities import CITIES
 from .migration import upgrade_schema
+from .operations import normalize_configuration, scenario_vehicles, telemetry_at, delivery_report
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -32,7 +33,7 @@ async def lifespan(_app: FastAPI):
                 raise RuntimeError('Production cannot start while the demo admin password is active')
     yield
 
-app = FastAPI(title='Aether Route · 无人投送仿真平台', version='2.0.0',
+app = FastAPI(title='Aether Route · 无人投送仿真平台', version='3.0.0',
               description='A*-Sim synthetic logistics mission planning and Monte Carlo simulation',
               lifespan=lifespan)
 app.add_middleware(CORSMiddleware,allow_origins=CORS_ORIGINS,allow_credentials=False,
@@ -88,7 +89,7 @@ def note(db:Session, user:m.User, action:str, subject:str, details:dict|None=Non
 
 @app.get(f'{PREFIX}/health')
 def health():
-    return {'status':'ok','service':'aether-route','version':'2.0.0','demo_mode':DEMO_MODE}
+    return {'status':'ok','service':'aether-route','version':'3.0.0','demo_mode':DEMO_MODE}
 
 @app.post(f'{PREFIX}/auth/login')
 def login(body:s.LoginIn,db:Session=Depends(get_db)):
@@ -192,6 +193,34 @@ def update_scenario(scenario_id:str,body:s.ScenarioPatch,db:Session=Depends(get_
     note(db,user,'scenario.update',scenario.id,changes);db.commit();db.refresh(scenario)
     return scenario
 
+@app.get(f'{PREFIX}/scenarios/{{scenario_id}}/configuration')
+def get_configuration(scenario_id:str,db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
+    scenario=lookup(db,m.Scenario,scenario_id)
+    _,_,vehicles=graph_and_fleet(db,scenario.city_id)
+    return normalize_configuration(scenario.configuration_data,vehicles)
+
+@app.patch(f'{PREFIX}/scenarios/{{scenario_id}}/configuration')
+def set_configuration(scenario_id:str,body:s.ConfigurationPatch,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
+    scenario=lookup(db,m.Scenario,scenario_id)
+    _,_,vehicles=graph_and_fleet(db,scenario.city_id)
+    current=normalize_configuration(scenario.configuration_data,vehicles)
+    patch=body.model_dump(exclude_unset=True,exclude_none=True)
+    if not patch:raise HTTPException(status_code=422,detail='没有提供想定配置参数')
+    if 'units' in patch:
+        known={v['id'] for v in vehicles}
+        identifiers=[u['vehicle_id'] for u in patch['units']]
+        if len(identifiers)!=len(set(identifiers)):
+            raise HTTPException(status_code=422,detail='同一平台不可重复加入力量编组')
+        if not set(identifiers).issubset(known):
+            raise HTTPException(status_code=422,detail='编组存在不属于当前城市的平台')
+        for unit in patch['units']:
+            same_city_nodes(db,scenario.city_id,unit['deploy_node'])
+    updated={**current,**patch}
+    scenario.configuration_data=updated
+    note(db,user,'scenario.configuration.update',scenario.id,patch)
+    db.commit()
+    return updated
+
 @app.delete(f'{PREFIX}/scenarios/{{scenario_id}}')
 def delete_scenario(scenario_id:str,db:Session=Depends(get_db),user:m.User=Depends(can_admin)):
     scenario = lookup(db,m.Scenario,scenario_id)
@@ -280,7 +309,9 @@ def create_plan(body:s.PlanIn,db:Session=Depends(get_db),user:m.User=Depends(can
     if not task_data:raise HTTPException(status_code=422,detail='当前场景没有投送任务')
     if any(t['origin'] not in {n['id'] for n in node_data} or t['destination'] not in {n['id'] for n in node_data} for t in task_data):
         raise HTTPException(status_code=422,detail='该想定存在不属于当前城市的任务节点')
-    result=sim.generate_plan(node_data,edge_data,vehicle_data,task_data,
+    configuration=normalize_configuration(scenario.configuration_data,vehicle_data)
+    planned_vehicles=scenario_vehicles(configuration,vehicle_data)
+    result=sim.generate_plan(node_data,edge_data,planned_vehicles,task_data,
                              s.ScenarioOut.model_validate(scenario).model_dump(mode='json'),
                              body.strategy,body.algorithm)
     plan=m.Plan(id='PLN-'+uuid4().hex[:8].upper(),scenario_id=scenario.id,
@@ -288,7 +319,8 @@ def create_plan(body:s.PlanIn,db:Session=Depends(get_db),user:m.User=Depends(can
                 strategy=body.strategy,algorithm=body.algorithm,
                 assignment_data=result['assignments'],summary_data=result['summary'],
                 snapshot_data={'scenario':s.ScenarioOut.model_validate(scenario).model_dump(mode='json'),
-                               'nodes':node_data,'edges':edge_data,'vehicles':vehicle_data})
+                               'nodes':node_data,'edges':edge_data,'vehicles':planned_vehicles,
+                               'tasks':task_data,'configuration':configuration})
     db.add(plan);note(db,user,'plan.generate',plan.id,body.model_dump());db.commit();db.refresh(plan)
     return plan
 
@@ -326,6 +358,20 @@ def list_runs(scenario_id:str|None=None,limit:int=Query(default=30,ge=1,le=100),
 @app.get(f'{PREFIX}/simulations/{{run_id}}',response_model=s.RunOut)
 def get_run(run_id:str,db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
     return lookup(db,m.SimulationRun,run_id)
+
+@app.get(f'{PREFIX}/simulations/{{run_id}}/telemetry')
+def simulation_telemetry(run_id:str,minute:float=Query(default=0,ge=0,le=100000),db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
+    run=lookup(db,m.SimulationRun,run_id)
+    plan=lookup(db,m.Plan,run.plan_id)
+    return telemetry_at({'id':run.id,'events':run.events},
+                        {'assignment_data':plan.assignment_data,'snapshot_data':plan.snapshot_data},minute)
+
+@app.get(f'{PREFIX}/simulations/{{run_id}}/report')
+def simulation_report(run_id:str,db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
+    run=lookup(db,m.SimulationRun,run_id)
+    plan=lookup(db,m.Plan,run.plan_id)
+    return delivery_report({'id':run.id,'iterations':run.iterations,'events':run.events,'metrics':run.metrics},
+       {'id':plan.id,'assignment_data':plan.assignment_data,'summary_data':plan.summary_data,'snapshot_data':plan.snapshot_data})
 
 @app.get(f'{PREFIX}/analytics/compare')
 def compare(ids:str=Query(min_length=1,max_length=1000),db:Session=Depends(get_db),_user:m.User=Depends(current_user)):

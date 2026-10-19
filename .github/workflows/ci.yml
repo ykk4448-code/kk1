@@ -23,3 +23,6 @@ jobs:
           node --check frontend/assets/charts.js
           node --check frontend/assets/map.js
           node --check frontend/assets/app.js
+
+      - name: Build standalone read-only demonstration preview
+        run: python scripts/build_preview.py

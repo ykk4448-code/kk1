@@ -1,4 +1,4 @@
-"""Produce a standalone read-only AETHER 2.0 HTML preview with live demo API snapshots.
+"""Produce a standalone read-only AETHER 3.0 HTML preview with live demo API snapshots.
 
 Preview does not persist writes; real app works at http://localhost:8000.
 """
@@ -27,7 +27,10 @@ with TestClient(app) as client:
     scenes=client.get('/api/v1/scenarios',headers=headers).json()
     for s in scenes:
         sid=s['id']
-        paths.extend([f'/scenarios/{sid}/tasks',f'/plans?scenario_id={sid}&limit=100',f'/simulations?scenario_id={sid}&limit=100'])
+        paths.extend([f'/scenarios/{sid}/tasks',f'/scenarios/{sid}/configuration',f'/plans?scenario_id={sid}&limit=100',f'/simulations?scenario_id={sid}&limit=100'])
+    for scen in scenes:
+        for run in client.get('/api/v1/simulations',headers=headers,params={'scenario_id':scen['id']}).json():
+            paths.extend([f"/simulations/{run['id']}/report",f"/simulations/{run['id']}/telemetry?minute=0.00"])
     paths.append('/audit?limit=100')
     fixtures={path:client.get('/api/v1'+path,headers=headers).json() for path in paths}
 
@@ -47,7 +50,7 @@ window.fetch=async function(url,options={}){
   const path=String(url).replace(/^\\/api\\/v1/,'');
   if(path==='/auth/login')return {ok:true,status:200,json:async()=>({access_token:'preview-token',user:{username:'admin',role:'admin'}})};
   if(path==='/auth/me')return {ok:true,status:200,json:async()=>({username:'admin',role:'admin'})};
-  const data=MOCK_PAYLOAD[path];
+  const data=MOCK_PAYLOAD[path] ?? (path.includes('/telemetry?minute=')?MOCK_PAYLOAD[path.split('?')[0]+'?minute=0.00']:undefined);
   if(data===undefined)return {ok:false,status:501,json:async()=>({detail:'离线预览为只读快照，请启动正式服务执行写操作'})};
   return {ok:true,status:200,json:async()=>structuredClone(data)};
 };'''

@@ -61,6 +61,7 @@ class Scenario(Base):
     wind_kmh: Mapped[float] = mapped_column(Float, default=5)
     visibility_km: Mapped[float] = mapped_column(Float, default=12)
     status: Mapped[str] = mapped_column(String(20), default='ready')
+    configuration_data: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     tasks: Mapped[list['DeliveryTask']] = relationship(back_populates='scenario', cascade='all, delete-orphan')
 
