@@ -1,0 +1,274 @@
+/*
+ * AETHER / ICE BLUE 9.0
+ * Light-blue, data-first application theme. Last stylesheet in the cascade.
+ * Five-entry landing and existing mission/simulation features remain intact.
+ * Real OSM tiles are not recolored into operational/authoritative map products.
+ */
+:root{
+  color-scheme:light;
+  --sky-25:#fafcff;
+  --sky-50:#f5f9ff;
+  --sky-100:#edf5ff;
+  --sky-150:#e7f2ff;
+  --sky-200:#d9eafa;
+  --sky-300:#c1dcf4;
+  --sky-500:#397fca;
+  --sky-600:#246ab4;
+  --sky-700:#1d538f;
+  --sky-800:#1b3c60;
+  --sky-900:#17334f;
+  --sky-muted:#526f8b;
+  --sky-line:#d0e1f2;
+  --sky-white:#fff;
+  --chart-paper:var(--sky-50);
+  --chart-warm:var(--sky-100);
+  --chart-panel:var(--sky-white);
+  --chart-sand:var(--sky-200);
+  --chart-water:#cae8fa;
+  --chart-water-deep:#a8cde8;
+  --chart-grid:#a5c5e3;
+  --chart-ink:var(--sky-900);
+  --chart-muted:var(--sky-muted);
+  --chart-border:var(--sky-line);
+  --chart-navy:var(--sky-800);
+  --chart-teal:#158b9d;
+  --chart-red:#c75962; /* errors and real interruptions only */
+  --chart-orange:#b7823d;
+  --bg:var(--sky-50);
+  --nav:#173f69;
+  --surface:#fff;
+  --surface2:var(--sky-100);
+  --line:var(--sky-line);
+  --soft:var(--sky-muted);
+  --dim:#6987a3;
+  --acid:var(--sky-600);
+  --cyan:#1683a4;
+  --blue:var(--sky-600);
+  --orange:#b7823d;
+  --design-ink:var(--sky-900);
+  --design-muted:var(--sky-muted);
+  --design-border:var(--sky-line);
+  --design-accent:var(--sky-600);
+  --design-green:#168b99;
+  --design-paper:var(--sky-50);
+}
+html,body{background:var(--sky-50);color:var(--sky-900)}
+body,button,input,select,textarea{font-family:Inter,'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #6eabed!important;outline-offset:2px}
+::selection{background:#cae4fc;color:#143553}
+/* Primary portal: five large, inviting directory rows. No extra navigation. */
+.shell.portal-mode{background:var(--sky-50)}
+.portal-landing,.shell.portal-mode .portal-landing{
+ background:radial-gradient(ellipse at 14% 42%,#deefff 0,transparent 49%),linear-gradient(118deg,#f8fbff 0%,#f2f8ff 52%,#eaf4ff 100%)!important;
+ color:var(--sky-900);
+}
+.portal-landing:before{opacity:.15!important;background-image:linear-gradient(#7caede40 1px,transparent 1px),linear-gradient(90deg,#7caede40 1px,transparent 1px)}
+.landing-masthead{border-color:#d5e5f4}
+.landing-logo{background:var(--sky-700)!important;border-color:var(--sky-700)!important;border-radius:10px;color:#fff}
+.landing-logo span{color:#c1e4ff!important}
+.landing-brand b{color:var(--sky-900);letter-spacing:.14em}
+.landing-brand small,.landing-indicator{color:#5f7c98}
+.landing-brand em{background:#dfedfc!important;color:#28649f!important;border-radius:5px}
+.landing-intro:before,.landing-intro .overline-line,.landing-section-head>span:last-child,.landing-number{color:var(--sky-600)!important}
+.landing-intro .overline-line{background:var(--sky-600)!important}
+.landing-intro h1{color:var(--sky-900)!important;font-family:Inter,'Noto Sans SC','PingFang SC',sans-serif;font-weight:730;letter-spacing:-.047em}
+.landing-intro h1 span{color:#2b76b9!important}
+.landing-intro p{color:#627d96!important;font-size:15px;line-height:1.9}
+.landing-intro:after{border-color:#bfd4e8;color:#7794ae}
+.landing-section-head{border-color:#9ab9d5;color:#274b70}
+.landing-modules{border-color:#c3d9ed}
+.landing-module{background:#ffffff50;border-color:#d4e4f3;color:var(--sky-900)!important;transition:background .18s,border-color .18s,padding .18s,box-shadow .18s}
+.landing-module:hover,.landing-module:focus-visible{background:#fff!important;border-color:#91c2ed!important;box-shadow:0 8px 26px #397cbb14;padding-left:24px;color:#123c66!important}
+.landing-module:active{background:#e7f3ff!important}
+.landing-module-info strong{color:var(--sky-900)!important;font-family:Inter,'Noto Sans SC','PingFang SC',sans-serif;font-weight:620;letter-spacing:.015em}
+.landing-module-info small{color:#6e8ca5}
+.landing-number{font-weight:700}
+.landing-module-arrow{color:#2d7abd!important}
+.landing-footer{color:#718ba5;border-color:#caddeb}
+.landing-pulse{background:#3a9ba9;box-shadow:0 0 0 4px #3a9ba91a}
+/* Secondary workspaces: dark-blue navigation, white canvas, restrained blue highlights. */
+.workspace-mode{background:var(--sky-50)}
+.workspace-mode .rail{background:#17446d!important;border-right:1px solid #0b345a;color:#eef7ff;box-shadow:8px 0 20px #264d7710}
+.workspace-mode .brand{border-color:#3c668c}
+.workspace-mode .brand-mark{background:#e3f3ff!important;color:#155389;border:1px solid #a3c9e9;border-radius:9px}
+.workspace-mode .brand-words strong,.workspace-mode .brand-words small{color:#ecf6ff}
+.workspace-mode .rail-heading,.workspace-mode .rail-footer-copy{color:#aac8df}
+.workspace-mode .rail-link{color:#d1e5f5}
+.workspace-mode .rail-link:hover{color:#fff;background:#25567f}
+.workspace-mode .rail-link.selected{color:#fff;background:#326898!important;box-shadow:inset 3px 0 #a9deff!important;border-color:#4e85b3}
+.workspace-mode .rail-link.selected .rail-step{background:#dfedfd;color:#15558c}
+.workspace-mode .rail-status{background:#214e74!important;border-color:#3e7098}
+.workspace-mode .rail-status strong{color:#edfbff}
+.workspace-mode .rail-status small{color:#b8d0e4}
+.workspace-mode .topbar{background:#fff!important;border-color:#d6e4f3;box-shadow:0 1px 0 #e0eaf3}
+.workspace-mode .home-link{color:#276fae!important;font-weight:650}
+.workspace-mode .page{background:var(--sky-50)}
+.workspace-mode .page-heading{border-color:#d7e5f3}
+.workspace-mode .page-heading h1,.workspace-mode .card-head h2{color:var(--sky-900)}
+.workspace-mode .page-heading p,.workspace-mode .card-head small{color:var(--sky-muted)}
+.workspace-mode .overline{color:#347fb9}
+.workspace-mode .overline-line{background:#408ac6}
+.workspace-mode .subnav{background:#fff;border:1px solid #d9e7f4;border-radius:10px}
+.workspace-mode .subnav-button{color:#53718e}
+.workspace-mode .subnav-button.current{background:#e9f4ff;color:#2065aa;box-shadow:inset 0 -2px #468fcd}
+.workspace-mode .card,.workspace-mode .metric,.workspace-mode .scenario-item,.workspace-mode .archive-row{background:#fff!important;border:1px solid #d8e6f4!important;border-radius:11px!important;box-shadow:0 2px 12px #35699908!important}
+.workspace-mode .card-head{border-color:#e6eff9}
+.workspace-mode .metric:before{background:#498fd0}
+.workspace-mode .metric-value,.workspace-mode .metric b{color:#1b548b}
+.workspace-mode .metric-top,.workspace-mode .metric-bottom{color:#55728c}
+.workspace-mode .metric-icon{background:#e9f4ff!important;color:#307db9!important;border-radius:8px}
+.workspace-mode .button-primary{background:#2879c1!important;border-color:#2879c1!important;color:#fff;box-shadow:0 3px 10px #2b74b422}
+.workspace-mode .button-primary:hover{background:#185f9f!important;border-color:#185f9f!important}
+.workspace-mode .button-ghost,.workspace-mode .button-light{background:#fff!important;color:#24669d!important;border-color:#cbdff1!important}
+.workspace-mode .button-ghost:hover,.workspace-mode .button-light:hover{background:#edf6ff!important;border-color:#92bce1!important}
+input,select,textarea{background:#fff!important;border:1px solid #c9ddec!important;color:#244767!important}
+input::placeholder,textarea::placeholder{color:#8198ad}
+input:focus,select:focus,textarea:focus{border-color:#5aa1d9!important;box-shadow:0 0 0 3px #4d9ddd1c!important}
+input[type=checkbox],input[type=range]{accent-color:#2a7ec4}
+.workspace-mode table th{background:#ebf4fd!important;border-color:#d5e6f3;color:#3c5c7d;font-weight:650}
+.workspace-mode table td{background:#fff!important;color:#345671;border-color:#e3edf6}
+.workspace-mode table td b{color:#233f59}
+.workspace-mode table tbody tr:hover td{background:#f0f7ff!important}
+.workspace-mode .badge{border-color:#d2e3f1}
+/* Geospatial container: airy blue backdrop. Keep OSM copyright and neutral basemap detail. */
+.geo-map,.workspace-mode .geo-map,.assessment .spatial-panel .geo-map{background:#d8eefd!important;border-color:#b6d6ed!important}
+.geo-map .geo-grid{background-image:linear-gradient(#6ca9d42b 1px,transparent 1px),linear-gradient(90deg,#6ca9d42b 1px,transparent 1px)!important;background-size:96px 96px!important;opacity:.48}
+.geo-map .geo-tiles{background:#cee8f8!important}
+.geo-map .geo-tile{filter:saturate(.80) brightness(1.065) contrast(.93)!important}
+.geo-map .geo-overlay{filter:drop-shadow(0 1px 1px #25476920)}
+.geo-map .geo-city-label{background:#fffefcf2!important;color:#1d4c74!important;border:1px solid #b9d8ee;box-shadow:0 4px 15px #32648c1d}
+.geo-map .geo-city-label small{color:#6587a5}
+.geo-map .geo-city-label .signal-dot{background:#3b9fc1!important;box-shadow:0 0 0 3px #3b9fc11c!important}
+.geo-map .geo-controls{background:#fff!important;border-color:#b8d5eb}
+.geo-map .geo-controls button{background:#fff!important;color:#255c8c!important;border-color:#d5e6f4}
+.geo-map .geo-controls button:hover{background:#eaf5ff!important;color:#165b9e}
+.geo-map .geo-scale,.geo-map .geo-attribution{background:#fffffff0!important;color:#426987!important}
+.geo-map .geo-attribution a{color:#2368ab!important}
+.geo-map.map-offline{background:#d9ecfa!important}
+.geo-map.map-offline:after{content:'离线地理网格 · 路网为合成模拟数据';position:absolute;left:12px;bottom:45px;z-index:3;pointer-events:none;font-size:11px;color:#2f5e85;background:#ffffffed;padding:5px 10px;border:1px solid #b4d4ec;border-radius:5px}
+.geo-map .geo-overlay line[stroke="#286bdb"]{stroke:#167bcb;stroke-width:4.3;stroke-opacity:1}
+.geo-map .geo-overlay line[stroke="#5799ba"]{stroke:#63a6d8}
+.geo-map .geo-overlay line[stroke="#d95a58"]{stroke:#cb5965}
+.geo-map .geo-overlay line[stroke="#cb9749"]{stroke:#b5813f}
+.geo-map .geo-overlay line[stroke="#9dabb8"]{stroke:#7da4c3}
+.geo-map .geo-overlay .geo-moving.is-selected circle[stroke]{stroke:#fff;stroke-width:3}
+.geo-map .geo-overlay .geo-pin rect{fill:#ffffff;fill-opacity:.97}
+.geo-map .geo-overlay .geo-pin text{fill:#244c6d}
+.map-legend,.workspace-mode .map-legend{background:#edf6ff!important;color:#496d8e;border-color:#c9e2f4}
+.map-status-strip .legend-line.blue{border-color:#287dc3!important}
+.map-status-strip .legend-dot.teal{background:#2595a7}
+.map-status-strip .legend-dot.red{background:#c75962}
+/* Action simulation / integrated assessment: usable, consistent per-panel hierarchy. */
+.assessment{background:#fff!important;border-color:#cddfed!important;box-shadow:0 7px 24px #284f790e;border-radius:10px!important;--ops-line:#d7e6f4;--ops-ink:#28465e;--ops-accent:#287fc7}
+.assessment .assessment-toolbar{background:#f4f9ff!important;border-bottom:1px solid #dceaf7;padding:17px 20px}
+.assessment .desk-title strong{color:#194c78;font-size:16px}
+.assessment .desk-title small{color:#6986a3}
+.assessment .desk-symbol{background:#e2f1fe;color:#2778b9;border-color:#cde5f7}
+.assessment .desk-actions select{background:#fff;border-color:#cfe0ef;color:#25557a}
+.assessment .desk-kpis{background:#f6faff!important;border-color:#dceaf7;padding:14px 0}
+.assessment .desk-kpis>div{border-color:#d9e8f5}
+.assessment .desk-kpis>div>span{color:#53718b;font-size:12px}
+.assessment .desk-kpis b,.assessment .desk-kpis>div:first-child b{color:#235d94}
+.assessment .desk-kpis>div:nth-child(2) b{color:#236b9f}
+.assessment .desk-kpis>div>small{color:#6886a0}
+.assessment .desk-panel{background:#fff!important}
+.assessment .desk-panel>header{background:#eef6ff!important;border-color:#d6e8f7;min-height:54px}
+.assessment .desk-panel>header b{color:#284c72;font-size:13px}
+.assessment .desk-panel>header small{color:#6685a3}
+.assessment .panel-counter{background:#e0effe;border-color:#cce0f2;color:#376791;border-radius:5px}
+.assessment .schedule-panel{background:#fff;border-color:#d3e3f2}
+.assessment .schedule-tools{background:#fff}
+.assessment .schedule-tools input,.assessment .schedule-tools select{background:#fff;border-color:#c7dfee;color:#294d6d}
+.assessment .schedule-ruler{background:#e9f4ff;color:#4c7190;border-color:#d4e6f3}
+.assessment .schedule-ruler small{color:#42688a;font-weight:600}
+.assessment .schedule-scroll{background:#fff;scrollbar-color:#c1dcef transparent}
+.assessment .schedule-row{background:#fff!important;border-color:#e5eff8}
+.assessment .schedule-row:hover{background:#edf6ff!important}
+.assessment .schedule-row.chosen{background:#e1f0ff!important;box-shadow:inset 3px 0 #3184c4}
+.assessment .schedule-label b{color:#2b4b68;font-size:12px}
+.assessment .schedule-label small{color:#647e95;font-size:11px}
+.assessment .schedule-track{background:repeating-linear-gradient(90deg,transparent,transparent calc(25% - 1px),#d9e9f5 calc(25% - 1px),#d9e9f5 25%)}
+.assessment .planned-bar{background:#bfddfa55;border-color:#8bbce8}
+.assessment .actual-bar,.assessment .schedule-row.chosen .actual-bar{background:#2c83c7;min-height:7px}
+.assessment .actual-bar.interrupted{background:#c65e63!important}
+.assessment .task-end{background:#2e7fc0}
+.assessment .incident-mark{color:#bb6368}
+.assessment .schedule-legend{background:#f3f9ff;border-color:#dae9f6;color:#557590}
+.assessment .spatial-panel,.assessment .spatial-panel>header{background:#ebf6ff!important}
+.assessment .spatial-panel .geo-map{min-height:460px;background:#d8edfc!important}
+.assessment .desk-map-layers{background:#f1f8ff!important;border-color:#d5e7f5;min-height:44px}
+.assessment .desk-map-layers label{color:#456989;font-size:12px}
+.assessment .desk-map-layers input{accent-color:#2b80c2}
+.assessment .desk-map-layers button{color:#2872ad}
+.assessment .map-status-strip{background:#f4f9fe!important;border-color:#d9e8f6;color:#4f7491}
+.assessment .live-badge{color:#277e9a}
+.assessment .live-badge i{background:#2a93ab;box-shadow:0 0 0 4px #2a93ab18}
+.assessment .inspector-panel{background:#fff!important;border-color:#cbdfee;box-shadow:0 16px 36px #204a781b}
+.assessment .inspector-panel>header{background:#eff7ff!important;border-color:#d6e7f4}
+.assessment .inspector-identity{background:#fff}
+.assessment .vehicle-glyph{background:#e9f5ff;border-color:#cfe3f5;color:#337eb6}
+.assessment .inspector-identity b,.assessment .inspector-metrics b{color:#2e526f}
+.assessment .state-pill.in_transit{background:#dff5f6;color:#167d86}
+.assessment .state-pill.failed{background:#fff0f0;color:#b85059}
+.assessment .state-pill.delivered{background:#e7f2fe;color:#276ba3}
+.assessment .range-track{background:#d8eaf7}
+.assessment .range-track i{background:#488ece}
+.assessment .inspector-position,.assessment .inspector-facts>div{border-color:#e3edf6}
+.assessment .desk-bottom{background:#fff!important;border-color:#d6e6f3}
+.assessment .trend-panel,.assessment .fleet-panel{background:#fff}
+.assessment .trend-legend{color:#52718d}
+.assessment .trend-legend span:first-child i{background:#2289a0!important}
+.assessment .trend-legend span:nth-child(2) i{background:#317bc1!important}
+.assessment .trend-legend span:nth-child(3) i{background:#b98849!important}
+.assessment .assessment-trend line[stroke="#e6ecf2"]{stroke:#dce8f4}
+.assessment .assessment-trend polyline[stroke="#178e93"]{stroke:#218ba2}
+.assessment .assessment-trend polyline[stroke="#3779ce"]{stroke:#2f7dc2}
+.assessment .assessment-trend polyline[stroke="#db9043"]{stroke:#b98a4f}
+.assessment .assessment-trend text{fill:#607e99}
+.assessment .fleet-row{background:#fff!important;border-color:#e5edf5;color:#47708d}
+.assessment .fleet-row:hover{background:#f1f8ff!important}
+.assessment .fleet-row.selected{background:#e7f3ff!important;box-shadow:inset 2px 0 #3486c8}
+.assessment .fleet-row b{color:#335676}
+.assessment .fleet-row small{font-size:10px;color:#7289a1}
+.assessment .desk-play{background:#347fc1!important;color:#fff}
+.assessment .desk-play:hover{background:#225f9f!important}
+.assessment .desk-player{background:#deeffe!important;border-color:#c8e0f2;color:#234e76}
+.assessment .desk-player>strong{color:#1f5688}
+.assessment .desk-player>span,.assessment .speed-label{color:#4a7190}
+.assessment #desk-slider{background:linear-gradient(to right,#378bcf var(--progress),#aacfe9 var(--progress))}
+.assessment #desk-slider::-webkit-slider-thumb{background:#2c7bbd;border-color:#fff;box-shadow:0 0 0 1px #8ebdde}
+.assessment .player-step{color:#2a6695}
+.assessment .speed-label select{background:#fff;color:#245b88;border-color:#b7d2e9}
+.assessment .desk-event-strip{background:#f5faff!important;color:#52718a;border-color:#d8e8f5}
+.assessment #desk-connection{color:#147e99}
+.assessment .ops-v7-header{background:#eaf5ff!important;border-color:#d6e7f4}
+.assessment .ops-v7-heading{background:#f5faff!important}
+.assessment .ops-v7-heading h3{color:#234c71}
+.assessment .ops-v7-heading small{color:#6285a2}
+.assessment .ops-v7-tools input,.assessment .ops-v7-tools select{background:#fff;border-color:#cde1f0}
+.assessment .ops-event-v7{background:#fff!important;border-color:#dce9f5}
+.assessment .ops-event-v7:hover{background:#eef7ff!important;border-color:#a9cdea}
+.assessment .ops-event-v7.is-current{background:#e5f3ff!important;border-color:#5e9bce}
+.assessment .ops-v7-bar{background:#d7e8f6}
+.assessment .ops-v7-bar i{background:#2b80c2}
+.assessment .ops-v7-action{color:#236caa}
+/* No small-screen horizontal scroll regressions. */
+@media(max-width:1200px){
+ .assessment .spatial-panel .geo-map{height:430px;min-height:430px}
+}
+@media(max-width:830px){
+ .assessment .inspector-panel{background:#fff}
+ .assessment .spatial-panel .geo-map{height:370px;min-height:370px}
+ .assessment .desk-player{background:#dceeff!important}
+}
+@media(max-width:580px){
+ .landing-intro h1{font-size:clamp(32px,9vw,46px);letter-spacing:-.035em}
+ .landing-modules{border-color:#d2e3f2}
+ .assessment .desk-kpis>div>span{white-space:normal;font-size:11px}
+ .assessment .spatial-panel .geo-map{height:300px;min-height:300px}
+ .assessment .desk-map-layers{gap:9px;padding:9px 8px}
+ .assessment .desk-map-layers label{font-size:11px}
+ .assessment .desk-player{padding:12px 10px;gap:8px}
+}
+@media(prefers-reduced-motion:reduce){.landing-module,.workspace-mode .button{transition:none!important}}
+@media print{body{background:#fff;color:#111}.assessment .desk-player,.workspace-mode .rail{display:none!important}.assessment,.assessment .desk-panel{background:#fff!important;color:#111;border-color:#aaa}}
