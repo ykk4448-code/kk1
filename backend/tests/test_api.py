@@ -7,11 +7,11 @@ def test_auth_required_and_login(client):
 
 def test_demo_data_integrity(client,admin_headers):
     scenarios=client.get(BASE+'/scenarios',headers=admin_headers).json()
-    assert len(scenarios)==3
+    assert len(scenarios)==5
     network=client.get(BASE+'/network',headers=admin_headers).json()
-    assert len(network['nodes'])==12 and len(network['edges'])==22 and len(network['vehicles'])==8
+    assert len(network['nodes'])==39 and len(network['edges'])==63 and len(network['vehicles'])==26
     runs=client.get(BASE+'/simulations',headers=admin_headers).json()
-    assert len(runs)==3
+    assert len(runs)==5
     assert all(len(r['samples'])==80 for r in runs)
 
 def test_end_to_end_plan_and_simulation(client,admin_headers):
@@ -57,10 +57,10 @@ def test_scenario_environment_edit(client,admin_headers):
 
 def test_catalog_create_and_conflict_detection(client,admin_headers):
     node=client.post(BASE+'/network/nodes',headers=admin_headers,json={
-        'id':'TEST_HUB','name':'新增实验枢纽','category':'hub','x':50,'y':93,'health':91})
+        'id':'TEST_HUB','name':'新增实验枢纽','category':'hub','x':50,'y':93,'lon':114.33,'lat':30.61,'city_id':'wuhan','health':91})
     assert node.status_code==201,node.text
     assert client.post(BASE+'/network/nodes',headers=admin_headers,json={
-        'id':'TEST_HUB','name':'重复实验枢纽','category':'hub','x':50,'y':93}).status_code==409
+        'id':'TEST_HUB','name':'重复实验枢纽','category':'hub','x':50,'y':93,'lon':114.33,'lat':30.61}).status_code==409
     edge=client.post(BASE+'/network/edges',headers=admin_headers,json={
         'source':'TEST_HUB','target':'N08','distance_km':9.5,'risk':.03,'terrain':'mountain'})
     assert edge.status_code==201,edge.text
@@ -70,7 +70,7 @@ def test_catalog_create_and_conflict_detection(client,admin_headers):
         'code':'UGV-999','name':'新增实验运输车','category':'ugv','capacity_kg':600,'speed_kmh':55,
         'range_km':210,'reliability':.97,'home_node':'TEST_HUB'})
     assert vehicle.status_code==201,vehicle.text
-    assert len(client.get(BASE+'/network',headers=admin_headers).json()['vehicles'])==9
+    assert len(client.get(BASE+'/network',headers=admin_headers).json()['vehicles'])==27
 
 def test_plan_snapshot_reproducibility(client,admin_headers):
     plan=client.post(BASE+'/plans',headers=admin_headers,json={'scenario_id':'SCN-001'}).json()

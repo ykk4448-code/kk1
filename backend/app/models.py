@@ -22,6 +22,9 @@ class Node(Base):
     category: Mapped[str] = mapped_column(String(32))
     x: Mapped[float] = mapped_column(Float)
     y: Mapped[float] = mapped_column(Float)
+    city_id: Mapped[str] = mapped_column(String(30), default="wuhan", index=True)
+    lon: Mapped[float] = mapped_column(Float, default=114.30)
+    lat: Mapped[float] = mapped_column(Float, default=30.58)
     health: Mapped[int] = mapped_column(Integer, default=100)
     status: Mapped[str] = mapped_column(String(16), default='online')
 
@@ -52,6 +55,7 @@ class Scenario(Base):
     __tablename__ = 'scenarios'
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
+    city_id: Mapped[str] = mapped_column(String(30), default="wuhan", index=True)
     description: Mapped[str] = mapped_column(Text, default='')
     weather: Mapped[str] = mapped_column(String(16), default='clear')
     wind_kmh: Mapped[float] = mapped_column(Float, default=5)

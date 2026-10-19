@@ -1,4 +1,4 @@
-/** Dependency-free SVG charts, synthetic topology rendering and accessible metrics. */
+/** Dependency-free SVG charts, accessible performance charts and interface iconography. */
 export function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
@@ -32,32 +32,6 @@ const paths = {
 export const icon = (name, size=16) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.activity}</svg>`;
 const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
 export const num = (value, places=0)=> Number(value||0).toFixed(places);
-
-export function networkMap(network,plan,run,minute=0, showPlan=true) {
-  if (!network) return '<div class="empty">路网加载中</div>';
-  const nMap=Object.fromEntries(network.nodes.map(n=>[n.id,n]));
-  const routeEdgeIds=new Set(showPlan?(plan?.assignment_data||[]).flatMap(a=>a.path_edges):[]);
-  const allPos = new Map();
-  if (run?.events) for (const e of run.events) if (e.kind==='position' && e.at_min<=minute) allPos.set(e.vehicle,e);
-  const paths=network.edges.map(e=>{
-    const a=nMap[e.source],b=nMap[e.target]; if(!a||!b)return '';
-    const selected=routeEdgeIds.has(e.id);
-    const color=e.status==='closed'?'#c67b78':e.status==='restricted'?'#b88653':selected?'#85dab6':'#4b6877';
-    const dash=e.status==='open'?'':e.status==='closed'?'stroke-dasharray=".55 1.1"':'stroke-dasharray=".9 .6"';
-    return `${selected?`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#56decf" stroke-opacity=".15" stroke-width="2.4"/>`:''}<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${color}" stroke-opacity="${selected?.9:.56}" stroke-width="${selected?.58:.25}" ${dash}/>`;
-  }).join('');
-  const groundVehicles=network.vehicles.filter(v=>v.status==='available').map(v=>{
-    const p=allPos.get(v.code)||nMap[v.home_node];if(!p)return '';
-    const x=p.x,y=p.y;return `<g><circle cx="${x}" cy="${y}" r="1.48" fill="#baff5c" fill-opacity=".12"/><circle cx="${x}" cy="${y}" r=".57" stroke="#c9fc8e" stroke-width=".17" fill="#91eaa9"/><path d="M${x-.24} ${y}h.48 M${x} ${y-.24}v.48" stroke="#071922" stroke-width=".12"/></g>`;
-  }).join('');
-  const nodes=network.nodes.map(n=>{
-    const active=['hub','command'].includes(n.category);
-    const color=n.category==='critical'?'#efc887':active?'#9ceccb':'#83bcd6';
-    const labelAlign=n.x>=83?'end':'start';const offset=n.x>=83?-2.2:2.2;
-    return `<g class="map-node" data-node="${esc(n.id)}"><circle class="node-ring" cx="${n.x}" cy="${n.y}" r="${active?1.25:1.0}" stroke="${color}" stroke-width=".2" fill="#0b1f2b"/><circle cx="${n.x}" cy="${n.y}" r=".42" fill="${color}"/><text class="node-tag" text-anchor="${labelAlign}" x="${n.x+offset}" y="${n.y-.13}">${esc(n.name)}</text><text class="node-label" text-anchor="${labelAlign}" x="${n.x+offset}" y="${n.y+2.25}">${esc(n.id)}  ·  ${n.health}%</text></g>`;
-  }).join('');
-  return `<div class="map-viewport"><div class="map-overlays"><span class="map-pill"><span class="dot"></span> LIVE NETWORK</span><span class="map-pill">${icon('layers',11)} ${network.nodes.length} 个关键节点</span></div><div class="map-coords">VIRTUAL GRID / 100 × 100<br>TOPOLOGY: BIDIRECTIONAL<br>MODEL: A*-SIM 1.0</div><svg class="map-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" role="img" aria-label="虚拟投送网络拓扑图，显示节点、道路与运力部署"><defs><radialGradient id="mapGlow"><stop stop-color="#3b786c" stop-opacity=".14"/><stop offset="1" stop-color="#163040" stop-opacity="0"/></radialGradient></defs><circle cx="51" cy="52" r="48" fill="url(#mapGlow)"/><circle cx="51" cy="52" r="25" fill="none" stroke="#3b9483" stroke-width=".12" stroke-dasharray=".7 1.1" opacity=".38"/><circle cx="51" cy="52" r="47" fill="none" stroke="#3b9483" stroke-width=".12" stroke-dasharray=".7 1.3" opacity=".28"/><path d="M0 80Q22 63 36 95T77 92L100 80" fill="none" stroke="#2f6371" stroke-width=".2" stroke-dasharray="1 1" opacity=".45"/>${paths}${nodes}${groundVehicles}</svg></div><div class="map-legend"><span class="legend-item"><i class="legend-line"></i> 规划通路</span><span class="legend-item"><i class="legend-line dash"></i> 受限道路</span><span class="legend-item"><i class="legend-circle"></i> 无人运载平台</span><span class="legend-item"><i class="legend-line purple"></i> 调度节点</span></div>`;
-}
 
 export function gantt(assignments, limit=7) {
   if(!assignments?.length)return '<div class="empty">暂无运输方案，请先生成规划</div>';

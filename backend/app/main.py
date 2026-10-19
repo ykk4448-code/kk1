@@ -16,9 +16,12 @@ from . import models as m, schemas as s, engine as sim
 from .security import current_user, can_edit, can_admin, verify_password, sign_token
 from .seed import seed_database
 from .config import DEMO_MODE, CORS_ORIGINS
+from .cities import CITIES
+from .migration import upgrade_schema
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    upgrade_schema()
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         if DEMO_MODE:
@@ -29,7 +32,7 @@ async def lifespan(_app: FastAPI):
                 raise RuntimeError('Production cannot start while the demo admin password is active')
     yield
 
-app = FastAPI(title='Aether Route · 无人投送仿真平台', version='1.0.0',
+app = FastAPI(title='Aether Route · 无人投送仿真平台', version='2.0.0',
               description='A*-Sim synthetic logistics mission planning and Monte Carlo simulation',
               lifespan=lifespan)
 app.add_middleware(CORSMiddleware,allow_origins=CORS_ORIGINS,allow_credentials=False,
@@ -48,8 +51,35 @@ def rows(db: Session, model) -> list[dict]:
             for row in db.scalars(select(model)).all()]
 
 
-def graph_and_fleet(db: Session):
-    return rows(db,m.Node),rows(db,m.Edge),rows(db,m.Vehicle)
+def graph_and_fleet(db: Session, city_id: str | None = None):
+    nodes = rows(db,m.Node)
+    edges = rows(db,m.Edge)
+    vehicles = rows(db,m.Vehicle)
+    if city_id:
+        nodes = [n for n in nodes if n['city_id'] == city_id]
+        ids = {n['id'] for n in nodes}
+        edges = [e for e in edges if e['source'] in ids and e['target'] in ids]
+        vehicles = [v for v in vehicles if v['home_node'] in ids]
+    return nodes,edges,vehicles
+
+
+def ensure_in_city(city_id:str,lat:float,lon:float):
+    city=next((c for c in CITIES if c['id']==city_id),None)
+    if not city:raise HTTPException(status_code=422,detail='不支持的城市编号')
+    clat,clon=city['center']
+    if abs(lat-clat)>1.6 or abs(lon-clon)>1.6:
+        raise HTTPException(status_code=422,detail='示例设施位置距离目标城市过远，请核对经纬度')
+
+
+def same_city_nodes(db: Session, city_id: str, *node_ids: str):
+    for node_id in node_ids:
+        node = lookup(db,m.Node,node_id)
+        if node.city_id != city_id:
+            raise HTTPException(status_code=422,detail='节点不属于当前城市，禁止跨城市混合规划')
+
+@app.get(f'{PREFIX}/cities')
+def cities(_user:m.User=Depends(current_user)):
+    return CITIES
 
 
 def note(db:Session, user:m.User, action:str, subject:str, details:dict|None=None):
@@ -58,7 +88,7 @@ def note(db:Session, user:m.User, action:str, subject:str, details:dict|None=Non
 
 @app.get(f'{PREFIX}/health')
 def health():
-    return {'status':'ok','service':'aether-route','version':'1.0.0','demo_mode':DEMO_MODE}
+    return {'status':'ok','service':'aether-route','version':'2.0.0','demo_mode':DEMO_MODE}
 
 @app.post(f'{PREFIX}/auth/login')
 def login(body:s.LoginIn,db:Session=Depends(get_db)):
@@ -72,28 +102,36 @@ def me(user:m.User=Depends(current_user)):
     return {'username':user.username,'role':user.role}
 
 @app.get(f'{PREFIX}/overview')
-def overview(db:Session=Depends(get_db), _user:m.User=Depends(current_user)):
+def overview(city_id:str|None=None,db:Session=Depends(get_db), _user:m.User=Depends(current_user)):
     scenarios = db.scalar(select(func.count()).select_from(m.Scenario)) or 0
     tasks = db.scalar(select(func.count()).select_from(m.DeliveryTask)) or 0
-    vehicles = db.scalars(select(m.Vehicle)).all()
-    edges = db.scalars(select(m.Edge)).all()
+    node_data,edge_data,vehicle_data=graph_and_fleet(db,city_id)
+    vehicles=vehicle_data
+    edges=edge_data
     last_run = db.scalar(select(m.SimulationRun).order_by(m.SimulationRun.created_at.desc(),m.SimulationRun.id.desc()).limit(1))
+    if city_id:
+        scenarios=db.scalar(select(func.count()).select_from(m.Scenario).where(m.Scenario.city_id==city_id)) or 0
+        tasks=db.scalar(select(func.count()).select_from(m.DeliveryTask).join(m.Scenario).where(m.Scenario.city_id==city_id)) or 0
     return {'scenario_count':scenarios,'task_count':tasks,'vehicle_count':len(vehicles),
-            'available_vehicles':sum(v.status=='available' for v in vehicles),
-            'node_count':db.scalar(select(func.count()).select_from(m.Node)) or 0,
-            'edge_count':len(edges),'restricted_edges':sum(e.status != 'open' for e in edges),
+            'available_vehicles':sum(v['status']=='available' for v in vehicles),
+            'node_count':len(node_data),
+            'edge_count':len(edges),'restricted_edges':sum(e['status'] != 'open' for e in edges),
             'latest_run':s.RunOut.model_validate(last_run).model_dump(mode='json') if last_run else None}
 
 @app.get(f'{PREFIX}/network')
-def network(db:Session=Depends(get_db), _user:m.User=Depends(current_user)):
-    nodes,edges,vehicles = graph_and_fleet(db)
+def network(city_id:str|None=None,db:Session=Depends(get_db), _user:m.User=Depends(current_user)):
+    nodes,edges,vehicles = graph_and_fleet(db,city_id)
     return {'nodes':nodes,'edges':edges,'vehicles':vehicles}
 
 @app.post(f'{PREFIX}/network/nodes',response_model=s.NodeOut,status_code=201)
 def create_node(body:s.NodeIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     if db.get(m.Node,body.id):
         raise HTTPException(status_code=409,detail='节点编号已存在')
-    node=m.Node(**body.model_dump(),status='online')
+    payload=body.model_dump()
+    if payload['lon'] is None or payload['lat'] is None:
+        raise HTTPException(status_code=422,detail='真实城市地图节点必须提供经纬度')
+    ensure_in_city(payload['city_id'],payload['lat'],payload['lon'])
+    node=m.Node(**payload,status='online')
     db.add(node);note(db,user,'network.node.create',node.id,body.model_dump());db.commit();db.refresh(node)
     return node
 
@@ -102,13 +140,16 @@ def update_node(node_id:str,body:s.NodePatch,db:Session=Depends(get_db),user:m.U
     node=lookup(db,m.Node,node_id)
     changes=body.model_dump(exclude_unset=True,exclude_none=True)
     if not changes:raise HTTPException(status_code=422,detail='没有提供有效的节点更新内容')
+    candidate_lat=changes.get('lat',node.lat);candidate_lon=changes.get('lon',node.lon)
+    ensure_in_city(node.city_id,candidate_lat,candidate_lon)
     for name,value in changes.items():setattr(node,name,value)
     note(db,user,'network.node.update',node.id,changes);db.commit();db.refresh(node)
     return node
 
 @app.post(f'{PREFIX}/network/edges',response_model=s.EdgeOut,status_code=201)
 def create_edge(body:s.EdgeIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
-    lookup(db,m.Node,body.source);lookup(db,m.Node,body.target)
+    a=lookup(db,m.Node,body.source);b=lookup(db,m.Node,body.target)
+    if a.city_id!=b.city_id:raise HTTPException(status_code=422,detail='禁止跨城市创建路网通道')
     # Prevent ambiguous parallel edges in the bidirectional model.
     existing=db.scalar(select(m.Edge.id).where(
         ((m.Edge.source==body.source)&(m.Edge.target==body.target)) |
@@ -128,8 +169,10 @@ def create_vehicle(body:s.VehicleIn,db:Session=Depends(get_db),user:m.User=Depen
     return vehicle
 
 @app.get(f'{PREFIX}/scenarios',response_model=list[s.ScenarioOut])
-def scenarios(db:Session=Depends(get_db), _user:m.User=Depends(current_user)):
-    return db.scalars(select(m.Scenario).order_by(m.Scenario.created_at,m.Scenario.id)).all()
+def scenarios(city_id:str|None=None,db:Session=Depends(get_db), _user:m.User=Depends(current_user)):
+    q=select(m.Scenario).order_by(m.Scenario.created_at,m.Scenario.id)
+    if city_id:q=q.where(m.Scenario.city_id==city_id)
+    return db.scalars(q).all()
 
 @app.post(f'{PREFIX}/scenarios',response_model=s.ScenarioOut,status_code=201)
 def create_scenario(body:s.ScenarioIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
@@ -165,11 +208,21 @@ def tasks(scenario_id:str,db:Session=Depends(get_db),_user:m.User=Depends(curren
 @app.post(f'{PREFIX}/scenarios/{{scenario_id}}/tasks',response_model=s.TaskOut,status_code=201)
 def create_task(scenario_id:str,body:s.TaskIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     lookup(db,m.Scenario,scenario_id)
-    lookup(db,m.Node,body.origin); lookup(db,m.Node,body.destination)
+    scenario=lookup(db,m.Scenario,scenario_id)
+    same_city_nodes(db,scenario.city_id,body.origin,body.destination)
     count = db.scalar(select(func.count()).select_from(m.DeliveryTask).where(m.DeliveryTask.scenario_id==scenario_id)) or 0
     task=m.DeliveryTask(id='TSK-'+uuid4().hex[:10].upper(),scenario_id=scenario_id,
                         code=f'T-{count+1:03}', **body.model_dump())
     db.add(task);note(db,user,'task.create',task.id,body.model_dump());db.commit();db.refresh(task)
+    return task
+
+@app.patch(f'{PREFIX}/scenarios/{{scenario_id}}/tasks/{{task_id}}',response_model=s.TaskOut)
+def update_task(scenario_id:str,task_id:str,body:s.TaskPatch,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
+    task=lookup(db,m.DeliveryTask,task_id)
+    if task.scenario_id!=scenario_id:raise HTTPException(status_code=404,detail='任务不属于当前想定')
+    changes=body.model_dump(exclude_unset=True,exclude_none=True)
+    for key,value in changes.items():setattr(task,key,value)
+    note(db,user,'task.update',task.id,changes);db.commit();db.refresh(task)
     return task
 
 @app.delete(f'{PREFIX}/scenarios/{{scenario_id}}/tasks/{{task_id}}')
@@ -184,28 +237,49 @@ def vehicles(db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
     return db.scalars(select(m.Vehicle).order_by(m.Vehicle.code)).all()
 
 class VehiclePatch(BaseModel):
-    status: str = Field(pattern='^(available|maintenance|offline)$')
+    status: str | None = Field(default=None,pattern='^(available|maintenance|offline)$')
+    name: str | None = Field(default=None,min_length=2,max_length=80)
+    capacity_kg: float | None = Field(default=None,gt=0,le=100000)
+    speed_kmh: float | None = Field(default=None,gt=0,le=350)
+    range_km: float | None = Field(default=None,gt=0,le=5000)
+    reliability: float | None = Field(default=None,ge=0,le=1)
 
 @app.patch(f'{PREFIX}/vehicles/{{vehicle_id}}',response_model=s.VehicleOut)
 def update_vehicle(vehicle_id:str,body:VehiclePatch,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     vehicle=lookup(db,m.Vehicle,vehicle_id)
-    vehicle.status=body.status
-    note(db,user,'vehicle.update',vehicle.id,body.model_dump());db.commit();db.refresh(vehicle)
+    changes=body.model_dump(exclude_unset=True,exclude_none=True)
+    if not changes:raise HTTPException(status_code=422,detail='未提供任何有效修改')
+    for name,value in changes.items():setattr(vehicle,name,value)
+    note(db,user,'vehicle.update',vehicle.id,changes);db.commit();db.refresh(vehicle)
     return vehicle
 
 @app.patch(f'{PREFIX}/network/edges/{{edge_id}}',response_model=s.EdgeOut)
 def update_edge(edge_id:str,body:s.EdgeStatusIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     edge=lookup(db,m.Edge,edge_id)
-    edge.status=body.status
-    note(db,user,'network.edge.update',edge.id,body.model_dump());db.commit();db.refresh(edge)
+    changes=body.model_dump(exclude_unset=True,exclude_none=True)
+    if not changes:raise HTTPException(status_code=422,detail='未提供任何有效修改')
+    for name,value in changes.items():setattr(edge,name,value)
+    note(db,user,'network.edge.update',edge.id,changes);db.commit();db.refresh(edge)
     return edge
+
+@app.get(f'{PREFIX}/routes/preview')
+def route_preview(origin:str,destination:str,city_id:str='wuhan',strategy:str='balanced',algorithm:str='astar',weather:str='clear',db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
+    if strategy not in ('balanced','fastest','safest') or algorithm not in ('astar','dijkstra') or weather not in ('clear','rain','fog','wind'):
+        raise HTTPException(status_code=422,detail='不支持的规划参数')
+    same_city_nodes(db,city_id,origin,destination)
+    nodes,edges,_=graph_and_fleet(db,city_id)
+    path=sim.find_path(sim.build_graph(nodes,edges),origin,destination,strategy=strategy,weather=weather,algorithm=algorithm)
+    if path is None:raise HTTPException(status_code=409,detail='当前没有可通行的路径')
+    return path
 
 @app.post(f'{PREFIX}/plans',response_model=s.PlanOut,status_code=201)
 def create_plan(body:s.PlanIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     scenario = lookup(db,m.Scenario,body.scenario_id)
-    node_data,edge_data,vehicle_data=graph_and_fleet(db)
+    node_data,edge_data,vehicle_data=graph_and_fleet(db,scenario.city_id)
     task_data=[s.TaskOut.model_validate(t).model_dump(mode='json') for t in scenario.tasks]
     if not task_data:raise HTTPException(status_code=422,detail='当前场景没有投送任务')
+    if any(t['origin'] not in {n['id'] for n in node_data} or t['destination'] not in {n['id'] for n in node_data} for t in task_data):
+        raise HTTPException(status_code=422,detail='该想定存在不属于当前城市的任务节点')
     result=sim.generate_plan(node_data,edge_data,vehicle_data,task_data,
                              s.ScenarioOut.model_validate(scenario).model_dump(mode='json'),
                              body.strategy,body.algorithm)

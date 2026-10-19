@@ -12,9 +12,15 @@ class NodeIn(BaseModel):
     category: Literal['hub','depot','critical','delivery','command']
     x: float = Field(ge=0, le=100)
     y: float = Field(ge=0, le=100)
+    city_id: str = Field(default="wuhan", pattern="^(wuhan|shanghai|chengdu|shenzhen)$")
+    lon: float | None = Field(default=None, ge=73, le=135)
+    lat: float | None = Field(default=None, ge=18, le=54)
     health: int = Field(default=100, ge=0, le=100)
 
 class NodePatch(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=80)
+    lon: float | None = Field(default=None, ge=73, le=135)
+    lat: float | None = Field(default=None, ge=18, le=54)
     status: Literal['online','offline'] | None = None
     health: int | None = Field(default=None, ge=0, le=100)
 
@@ -46,6 +52,9 @@ class NodeOut(ORMModel):
     category: str
     x: float
     y: float
+    city_id: str
+    lon: float
+    lat: float
     health: int
     status: str
 
@@ -71,6 +80,7 @@ class VehicleOut(ORMModel):
     status: str
 
 class ScenarioIn(BaseModel):
+    city_id: str = Field(default="wuhan", pattern="^(wuhan|shanghai|chengdu|shenzhen)$")
     name: str = Field(min_length=2, max_length=100)
     description: str = Field(default='', max_length=2000)
     weather: Literal['clear','rain','wind','fog'] = 'clear'
@@ -86,6 +96,7 @@ class ScenarioPatch(BaseModel):
 
 class ScenarioOut(ORMModel):
     id: str
+    city_id: str
     name: str
     description: str
     weather: str
@@ -106,6 +117,12 @@ class TaskIn(BaseModel):
         if self.origin == self.destination:
             raise ValueError('起点与终点不能相同')
         return self
+
+class TaskPatch(BaseModel):
+    cargo: str | None = Field(default=None, min_length=2, max_length=90)
+    weight_kg: float | None = Field(default=None, gt=0, le=5000)
+    deadline_min: float | None = Field(default=None, gt=0, le=1440)
+    priority: int | None = Field(default=None, ge=1, le=3)
 
 class TaskOut(ORMModel):
     id: str
@@ -151,7 +168,9 @@ class RunOut(ORMModel):
     created_at: datetime
 
 class EdgeStatusIn(BaseModel):
-    status: Literal['open', 'restricted', 'closed']
+    status: Literal['open', 'restricted', 'closed'] | None = None
+    distance_km: float | None = Field(default=None, gt=0, le=10000)
+    risk: float | None = Field(default=None, ge=0, le=0.95)
 
 class LoginIn(BaseModel):
     username: str

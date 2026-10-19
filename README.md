@@ -1,159 +1,108 @@
-# 凌航 AETHER · 无人投送仿真决策平台
+# 凌航 AETHER 2.0 · 城市级联合投送仿真决策平台
 
-**完整的、可运行的前后端项目。** 面向虚拟城市物流、应急物资配送和无人运输平台协同实验，覆盖资源台账、规则管理、方案规划、行动推演、可视化态势、统计评估和操作审计。
+> **演示系统 / 非真实作业软件。** 以中国城市真实地理坐标为底图参照，采用**近似示例地标位置和合成路网**完成民用应急物流仿真。**仿真路段不是实测道路；路线不能用于真实车辆导航、航线规划或安全关键调度。**
 
-> **重要边界**：项目使用**虚拟路网、虚拟平台和合成概率模型**；不控制真实车辆、无人机或其他设备，也不保证实际道路、空域及人员安全。不能用于真实环境的安全关键决策。
+## 五大一级业务入口
 
-## 1. 一分钟启动
+首页是五入口门户，不再将所有功能放在同一个仪表盘。进入任一入口后，通过二级标签导航到具体业务：
 
-需要 Python 3.11+。前端采用**零 npm 依赖的 ES Module 单页应用**，可直接由 FastAPI 静态托管；无需 Node 构建，适合离线部署。
+| 一级入口 | 二级功能 | 可进行的操作 |
+|---|---|---|
+| **01 基础数据** | 设施节点 / 投送通道 / 力量编组 | 按城市查看地理坐标、新建设施、编辑/停用节点、创建/调整/关闭通道、管理平台性能与状态 |
+| **02 想定管理** | 想定库 / 任务编排 / 环境约束 | 创建/切换想定，新增/编辑/删除配送任务，配置天气、风速、能见度等环境规则 |
+| **03 联合投送方案** | 智能编排 / 路径比选 / 方案档案 | A* 与 Dijkstra，均衡/时效/风险三策略；路线即时查询、运力分配、甘特图、历史方案快照 |
+| **04 行动推演** | 推演控制 / 事件时间线 / 历史运行 | 指定随机种子与轮次，Monte Carlo 仿真，地理沙盘回放、进度与事件检索 |
+| **05 评估分析** | 综合效能 / 方案对比 / 报告中心 | 任务成功率、准点率、平均延误、P90 时长、利用率、综合评分、运行对比、JSON/CSV/打印导出 |
+
+## 中国城市地图
+
+- **武汉**：武汉站、汉口站、武昌站、光谷广场、武汉大学、武汉天河机场等 12 个地理示例点。
+- **上海**：虹桥火车站、上海火车站、人民广场、陆家嘴、张江高科、浦东国际机场等 9 个点。
+- **成都**：成都东站、天府广场、双流机场、成都西站等 9 个点。
+- **深圳**：深圳北站、福田站、深圳湾、宝安机场、前海湾等 9 个点。
+
+内置 **39 个设施节点、63 条合成双向通道、26 台运载平台、5 套想定**。城市之间的设施、运力与任务隔离，非法跨城市任务由 API 拒绝。每个城市具备至少一套基线方案和 80 轮示例仿真数据。坐标属于近似 WGS84 参考点，不代表准确设施入口、真实停靠点、实时交通流或真实航路。
+
+前端实现了**无需地图 SDK 的 Web Mercator 地图**：缩放、拖动、节点选取、方案线路高亮、回放位置。实际道路底图通过 [OpenStreetMap 瓦片服务](https://www.openstreetmap.org/copyright) 在线加载并保留归属署名。**瓦片加载需要浏览器联网**；离线时显示地理网格与业务设施的相对地理位置，仍能编辑数据、规划和推演。请遵守 OSM 瓦片使用政策；高并发、离线和商业部署请改为经许可的本地/商用瓦片服务。
+
+## 快速启动
+
+要求 Python 3.11+；前端不需要 npm。
 
 ```bash
-# 从项目根目录运行
 python -m venv .venv
-source .venv/bin/activate                  # Windows: .venv\Scripts\activate
+source .venv/bin/activate                    # Windows: .venv\Scripts\activate
 pip install -r backend/requirements.txt
-DEMO_MODE=true PYTHONPATH=backend uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+DEMO_MODE=true PYTHONPATH=backend uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-浏览器访问：**http://127.0.0.1:8000/** ；接口文档：**http://127.0.0.1:8000/docs**。
+访问 **http://localhost:8000**，API 文档 **http://localhost:8000/docs**。
 
-演示环境会初始化 3 个仿真场景、12 个节点、22 条边、8 台平台、21 项任务，并自动生成基线方案和 80 轮仿真样本。演示凭证：`admin / demo123456`，前端仅在 DEMO_MODE 启用时自动登录。
+演示模式自动使用 `admin / demo123456` 登录。**此账号仅供本地仿真演示，不要暴露到公网。**
 
-Docker 启动：
+Docker：
 
 ```bash
 docker compose up --build -d
-# http://localhost:8000
 ```
 
-Compose 默认**仅绑定主机的 127.0.0.1**，不会把演示密码暴露给公网。
+Compose 默认只发布到主机 `127.0.0.1:8000`，保留 SQLite 数据卷。
 
-## 2. 产品模块与手写需求对照
+### 从旧版 v1.0 升级
 
-| 手写需求（结合字迹作工程化理解） | 实现功能 |
-| --- | --- |
-| 无人投送/接运系统（仿真实验） | AETHER 仿真工作台；完全虚拟、不连接实际装备 |
-| 基础数据 | 节点、设施健康度、路段拓扑/风险、平台配置、任务资源 |
-| 规定/规则管理 | 天气、风速、能见度、平台可用状态、道路通行限制 |
-| 投送方案 | A*、Dijkstra、三种策略、多平台任务调度、版本快照 |
-| 行动推演 | 基于固定种子的 Monte Carlo；节点位置回放、事件时间轴 |
-| 评估分析 | 成功率、准点率、P90、延迟、风险事件、利用率、评分与方案对比 |
-| 图层、环境条件、关键基础设施状态 | 双层矢量网络沙盘、节点/道路图例、环境控制面板 |
-| 力量编组、可视化部署 | 运输平台目录、容量与续航约束、虚拟位置及分配关系 |
-| 甘特图、时序回放、结果统计 | Gantt、回放滑块、事件日志、趋势图、综合评分 |
-| 平台类型、任务参数 | UGV/UAV 类型、载荷、截止时间、优先级与节点位置 |
+V2 会对已有 **SQLite** 数据库进行增量字段升级（不删除历史数据）；原有虚拟点的经纬度没有真实地理含义，因此**旧演示数据库无法自动变为新版四城市地标数据**。若只想体验 v2 的新示例数据，请先**备份旧数据**，然后在新目录或新 Docker volume 上启动 v2；切勿在保存重要任务数据的卷上执行 `docker compose down -v`。对于 PostgreSQL 等生产数据库需要独立的 DDL 迁移流程，此仓库自带增量迁移仅覆盖 SQLite。
 
-**解读假设**：原图中标题和个别字迹较模糊，本项目将其定义为“面向应急物流的无人投送仿真决策系统”；未将图中的“仿真”误认为已经接入真实设备。细化的业务假设和模型限制见 `docs/requirements.md`。
-
-## 3. 技术架构
+## 技术架构
 
 ```text
-┌───────────────────────────────────────────────────────────┐
-│                AETHER Responsive SPA                      │
-│    HTML + CSS + ES Modules + SVG / no build tooling      │
-│    Dashboards / Resource CRUD / Playback / Analytics      │
-└──────────────────────────────┬────────────────────────────┘
-                               │ HTTP / JSON / Bearer token
-┌──────────────────────────────▼────────────────────────────┐
-│                  FastAPI  /api/v1                         │
-│   Pydantic contracts  · RBAC  · HMAC-signed access tokens │
-│   Scenarios / Network / Plans / Simulations / Audits       │
-├───────────────────────┬───────────────────────────────────┤
-│     A*-Sim Engine     │       Persistence Layer           │
-│  A* / Dijkstra        │ SQLAlchemy 2 + SQLite / Postgres  │
-│  Constrained dispatch │ immutable plan input snapshots   │
-│  Monte Carlo trials   │ saved samples, events, audit log │
-└───────────────────────┴───────────────────────────────────┘
+前端单页应用 (ES Modules / CSS / SVG / Web Mercator)
+    ├─ 五入口业务架构、二级标签、表单 CRUD、路线沙盘、甘特与回放
+    └─ GET/POST/PATCH/DELETE REST API + Bearer Auth
+                             │
+FastAPI + Pydantic (HTTP API) │
+    ├─ RBAC / 用户鉴权 / 审计追溯
+    ├─ 城市/设施/通道/运力/想定/任务管理
+    ├─ 联合规划 A* & Dijkstra + 三种加权目标
+    ├─ 固定种子 Monte Carlo 与事件模拟
+    └─ SQLAlchemy ORM → SQLite (演示) / 可替换持久层
 ```
 
-- **前端**：原生 JS 模块与现代 CSS；SVG 数字孪生图、甘特图、统计曲线、时间轴回放、7 个完整工作模块。无需第三方地图服务，免密钥、离线可用。
-- **后端**：FastAPI、Pydantic v2、SQLAlchemy 2；单一 API 前缀 `/api/v1`；OpenAPI 自动生成；提供独立认证、角色授权、服务异常处理和输入校验。
-- **数据层**：演示使用 SQLite、外键约束与持久化卷；可通过 `DATABASE_URL` 替换 PostgreSQL（需安装 `psycopg[binary]`）。**生产部署须自行建立迁移/备份策略**，当前不是多租户 SaaS。
-- **规划引擎**：启发式 A*、Dijkstra、禁行路径过滤、路网风险系数、载重/续航/天气约束、车辆复用、预计完成时间与任务时限考核。
-- **仿真引擎**：固定伪随机种子，路段风险触发扰动、行驶时间噪声、个别失败事件、按平台延迟传递，保存每轮指标与一条基线事件轨迹。
-- **可复现性**：每份方案保存其场景、路段、节点和平台的**输入快照**；后续网络修改不会悄悄改变历史方案仿真输入。
+### 主要 API
 
-## 4. 业务使用流程
+- `GET /api/v1/cities`：四城市信息（需要登录）
+- `GET /api/v1/network?city_id=wuhan`：指定城市的节点、通道与运力
+- `POST /api/v1/network/nodes`、`PATCH /api/v1/network/nodes/{id}`：设施维护
+- `POST /api/v1/network/edges`、`PATCH /api/v1/network/edges/{id}`：通道维护
+- `POST /api/v1/vehicles`、`PATCH /api/v1/vehicles/{id}`：运力管理
+- `GET/POST /api/v1/scenarios`、`PATCH /api/v1/scenarios/{id}`：想定管理
+- `GET/POST /api/v1/scenarios/{id}/tasks`、`PATCH/DELETE /api/v1/scenarios/{id}/tasks/{task}`：任务编排
+- `GET /api/v1/routes/preview`：两点路线即时计算（起点、终点、城市、策略、算法）
+- `POST/GET /api/v1/plans`：规划方案及输入快照
+- `POST/GET /api/v1/simulations`：推演事件、样本及指标
+- `GET /api/v1/analytics/compare`：按运行 ID 对比
+- `GET /api/v1/audit`：管理员审计
 
-1. 从**态势总览**选择示例场景，了解任务、路网、平台与历史结果。
-2. 进入**基础数据**：维护平台可用性，调整道路为畅通/受限/关闭，添加或删除任务。
-3. 在**规则管理**调整风速、能见度和天气，保存场景环境参数。
-4. 在**方案规划**选择 `综合均衡 / 时效优先 / 风险优先` 和 `A* / Dijkstra`，生成可审计的方案版本。
-5. 在**行动推演**以固定种子执行 80 轮虚拟实验；拖动时间轴以观察移动位置和任务事件。
-6. 在**评估分析**查看统计曲线、P90 时间、综合评分，横向比较历史运行；导出 JSON 报告。
-7. 在**审计日志**查看场景更改、方案生成、推演运行等写操作记录。
+使用 `/api/v1/auth/login` 获取 Bearer token，演示模式客户端自动登录。计划的历史快照独立于之后更改的城市通道与天气。每次推演支持相同种子复现。
 
-## 5. 常用 API
-
-```bash
-# 1) 登录
-curl -s http://127.0.0.1:8000/api/v1/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"demo123456"}'
-
-# 2) 获取令牌后
-TOKEN='填入上面的access_token'
-curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/v1/network
-
-# 3) 生成计划
-curl -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"scenario_id":"SCN-001","strategy":"balanced","algorithm":"astar"}' \
-  http://127.0.0.1:8000/api/v1/plans
-
-# 4) 运行仿真（plan_id 改成上一步返回值）
-curl -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"plan_id":"PLN-DEMO-001","iterations":80,"seed":2026}' \
-  http://127.0.0.1:8000/api/v1/simulations
-```
-
-全部接口、数据结构和 401/403/404/409/422 等错误详见 `/docs`。
-
-## 6. 本地测试
+## 验证
 
 ```bash
 pip install -r backend/requirements-dev.txt
-PYTHONPATH=backend pytest backend/tests -q
+PYTHONPATH=backend DEMO_MODE=true pytest backend/tests -q
 node --check frontend/assets/api.js
 node --check frontend/assets/charts.js
+node --check frontend/assets/map.js
 node --check frontend/assets/app.js
 ```
 
-包含算法正确性、线路封闭、运力承载、天气限制、可复现性、角色权限、数据校验、业务端到端测试。持续集成配置见 `.github/workflows/ci.yml`。
+测试覆盖鉴权、场景 CRUD、设施约束、跨城市隔离、路径 A* / Dijkstra、历史快照、可重复推演、任务修改和审计。GitHub Actions 在每次 push / PR 时自动执行。
 
-## 7. 发布、生产配置与安全
+## 安全与边界
 
-演示模式**只能用于本机试验**。将服务暴露到内网/公网之前，必须：
+1. **不含真实驾驶与飞行控制逻辑**。所谓无人运载平台是仿真数据实体。
+2. 地标坐标是近似示例点，边缘连线、速度、距离、风险均非实测，不可用于导航或安全决策。
+3. 不接入真实气象、交通或 GNSS；算法模型不构成实体装备安全性证明。
+4. DEMO_MODE 仅限可信本地环境；生产必须配置安全密钥、安全账号、访问控制、HTTPS、数据备份、观测与压力测试。
+5. SQLite 增量迁移兼容旧字段，但大量并发、分布式部署应使用正式迁移与事务型数据库。
 
-1. 设置 `DEMO_MODE=false`，并配置随机生成的 `SECRET_KEY`（至少 32 字符）；
-2. 通过 `scripts/create_admin.py` 创建正式管理员，不得使用演示密码；
-3. 使用 HTTPS / 反向代理、限流与 IP 策略；部署 PostgreSQL，备份和迁移；审计流外部归档；
-4. 进一步进行负载、安全与故障测试。当前演示系统尚未完成真实设备集成和安全认证。
-
-项目内 `scripts/publish_github.sh` 支持在本机 GitHub CLI (`gh`) 登录后创建**私有仓库并推送**，例如：
-
-```bash
-bash scripts/publish_github.sh aether-route-sim
-```
-
-需要 GitHub CLI 具有创建仓库的权限。**打包源码不等于已经发布到 GitHub。**
-
-## 8. 项目结构
-
-```text
-backend/app/        REST 接口、权限、SQLAlchemy、路网算法、仿真内核、演示数据
-backend/tests/      引擎与 API 自动化测试
-frontend/           真正连接后端的响应式前端 / 无第三方依赖
-frontend/assets/    模块化 JS、交互式 SVG 图表、界面样式
-scripts/            管理员初始化、GitHub 发布与预览测试
-.github/workflows/  GitHub Actions CI
-Dockerfile           单镜像前后端一体部署
-docker-compose.yml   本机安全绑定、持久化数据卷
-docs/                需求、架构、模型局限性与首页截图
-```
-
-**LICENSE：MIT。**
-
-### 前端独立视觉预览
-
-运行 `make preview` 会生成 `preview.html`。该文件嵌入合成测试数据，可用于设计走查；**其提交按钮不写入真实数据库**。完整的可写业务功能请使用上述 FastAPI 启动方式。界面截图单独保存在原始交付 ZIP 的 `docs/` 目录中；本仓库主要托管可运行源码与文档。
+详细说明：`docs/requirements.md`、`docs/simulation-model.md`、`docs/city-data.md`。

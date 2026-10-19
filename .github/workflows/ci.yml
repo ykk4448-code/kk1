@@ -21,4 +21,5 @@ jobs:
         run: |
           node --check frontend/assets/api.js
           node --check frontend/assets/charts.js
+          node --check frontend/assets/map.js
           node --check frontend/assets/app.js
