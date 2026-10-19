@@ -42,5 +42,7 @@ jobs:
         run: pytest frontend/tests/test_cartographic_theme.py -q
       - name: Validate light-blue theme and accessibility
         run: pytest frontend/tests/test_lightblue_theme.py -q
+      - name: Validate engineering UI theme
+        run: pytest frontend/tests/test_engineering_theme.py -q
       - name: Build standalone read-only demonstration preview
         run: python scripts/build_preview.py

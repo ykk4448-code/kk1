@@ -97,9 +97,9 @@ function home(){
  return `<div class="portal-landing" aria-label="一级业务首页">
   <div class="landing-glow landing-glow-a"></div><div class="landing-glow landing-glow-b"></div>
   <div class="landing-inner">
-   <div class="landing-masthead"><div class="landing-brand"><span class="landing-logo">A<span>·</span></span><span><b>AETHER <em>4.0</em></b><small>凌航 · 联合投送仿真决策平台</small></span></div><div class="landing-indicator"><span class="landing-pulse"></span> SYSTEM ONLINE · 城市级协同仿真</div></div>
-   <div class="landing-intro"><div class="overline"><span class="overline-line"></span> SYSTEM DIRECTORY / 01</div><h1>联合投送<br><span>仿真决策平台</span></h1><p>请选择业务模块进入二级功能工作台</p></div>
-   <div class="landing-section-head"><span>一级功能入口 <b>PRIMARY MODULES</b></span><span>05 / 05</span></div>
+   <div class="landing-masthead"><div class="landing-brand"><span class="landing-logo">A<span>·</span></span><span><b>AETHER <em>4.0</em></b><small>凌航 · 联合投送仿真决策平台</small></span></div><div class="landing-indicator"><span class="landing-pulse"></span> 仿真工作环境 · 非实时数据</div></div>
+   <div class="landing-intro"><div class="overline"><span class="overline-line"></span> 业务系统 / MODULES</div><h1>联合投送<br><span>仿真决策平台</span></h1><p>请选择业务模块进入二级功能工作台</p></div>
+   <div class="landing-section-head"><span>一级功能入口 <b>MODULE DIRECTORY</b></span><span>05 / 05</span></div>
    <nav class="landing-modules" aria-label="五个一级功能入口">${MODULES.map((m,i)=>`<button type="button" class="landing-module" data-page="${m.id}" aria-label="进入${m.name}二级功能"><span class="landing-number">0${i+1}<span> / 05</span></span><span class="landing-module-icon">${icon(m.icon,31)}</span><span class="landing-module-info"><strong>${m.name}</strong><small>${m.en}</small></span><span class="landing-module-arrow" aria-hidden="true">↗</span></button>`).join('')}</nav>
    <div class="landing-footer"><span>从左至右：基础数据 → 想定管理 → 联合投送方案 → 行动推演 → 评估分析</span><span>虚拟场景 · 合成仿真数据</span></div>
   </div></div>`;
