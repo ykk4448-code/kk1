@@ -67,10 +67,38 @@ export function mountAssessment(context){
   const events=data.events.filter(e=>e.at_min<=minute&&['dispatch','arrived','failed','warning'].includes(e.kind));
   const latest=events[events.length-1];$('#desk-event').innerHTML=latest?`<i class="event-bullet ${safe(latest.level)}"></i><span class="mono">${clock(latest.at_min)}</span> ${safe(latest.vehicle||'')} · ${safe(latest.message)}`:'<i class="event-bullet"></i> 等待首次任务派遣';
  }
+ // Keep at most one telemetry request in flight. Fast playback must not
+ // discard EVERY response when network latency exceeds the 500 ms clock tick.
+ let telemetryBusy=false,telemetryQueued=false;
  async function fetchTelemetry(){
-  const request=++ticket,at=minute;
-  try{const result=await get(`/simulations/${encodeURIComponent(context.run.id)}/telemetry?minute=${at.toFixed(3)}`);if(disposed||request!==ticket)return;telemetry=result;lastError='';$('#desk-connection').textContent='回放数据已同步';$('#desk-connection').classList.remove('sync-error');$('#desk-active').textContent=result.active_count;$('#desk-inspector').innerHTML=inspector();$('#desk-fleet').innerHTML=fleet();drawMap();}
-  catch(error){if(disposed||request!==ticket)return;lastError=error.message;playing=false;clearInterval(timer);$('#desk-play').textContent='▶';$('#desk-play').setAttribute('aria-label','播放回放');$('#desk-connection').textContent='同步失败 · 点击重试';$('#desk-connection').classList.add('sync-error');}
+  if(disposed||!context.run)return;
+  if(telemetryBusy){telemetryQueued=true;return;}
+  telemetryBusy=true;
+  const at=minute;
+  try{
+   const result=await get(`/simulations/${encodeURIComponent(context.run.id)}/telemetry?minute=${at.toFixed(3)}`);
+   if(disposed)return;
+   // A user seek invalidates stale paused frames. While playing, present the
+   // latest available sample and request the current time on the next turn.
+   if(!playing&&Math.abs(minute-at)>.05){telemetryQueued=true;return;}
+   telemetry=result;lastError='';
+   $('#desk-connection').textContent=`仿真回放 · T+${Number(result.minute).toFixed(1)}`;
+   $('#desk-connection').classList.remove('sync-error');
+   $('#desk-active').textContent=result.active_count;
+   $('#desk-inspector').innerHTML=inspector();$('#desk-fleet').innerHTML=fleet();drawMap();
+  }catch(error){
+   if(disposed)return;
+   lastError=error.message;playing=false;clearInterval(timer);
+   $('#desk-play').textContent='▶';$('#desk-play').setAttribute('aria-label','播放回放');
+   $('#desk-connection').textContent='状态同步失败 · 点击重试';
+   $('#desk-connection').classList.add('sync-error');
+  }finally{
+   telemetryBusy=false;
+   if(!disposed&&telemetryQueued){
+    telemetryQueued=false;
+    queueMicrotask(()=>{if(!disposed)void fetchTelemetry();});
+   }
+  }
  }
  function seek(at){minute=Math.max(0,Math.min(maxTime(),Number(at)||0));playing=false;clearInterval(timer);$('#desk-play').textContent='▶';$('#desk-play').setAttribute('aria-label','播放回放');updateTime();clearTimeout(pending);pending=setTimeout(fetchTelemetry,100);}
  function playback(){
