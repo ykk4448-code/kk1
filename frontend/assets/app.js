@@ -32,7 +32,44 @@ function mapCard(title='城市地理沙盘',sub='城市地标示例位置 · OSM
 function renderMap(){renderGeoMap(S.network,city(),plan(),{routes:S.showRoutes,layers:S.module==='scenario'?S.configuration.layers:null,formations:S.module==='scenario'?S.configuration.units:null,telemetry:S.module==='simulation'?S.telemetry:null,preview:S.module==='planning'&&S.tabs.planning==='route'?S.routeData:null,minute:S.module==='simulation'?S.playMinute:null,run:run()});}
 function tabs(){const m=MODULES.find(m=>m.id===S.module);return `<div class="subnav" aria-label="${m.name}二级功能">${m.tabs.map(([id,label],i)=>`<button data-tab="${id}" class="subnav-button ${S.tabs[m.id]===id?'current':''}"><span class="subnav-index">0${i+1}</span>${label}</button>`).join('')}</div>`;}
 function scenarioPicker(){return `<label class="header-filter"><span>当前想定</span><select id="scenario-select" aria-label="选择想定">${S.scenarios.map(x=>`<option value="${txt(x.id)}" ${S.scenarioId===x.id?'selected':''}>${txt(x.name)}</option>`).join('')}</select></label>`;}
-function renderNavigation(){document.getElementById('nav').innerHTML=MODULES.map((m,i)=>`<button class="rail-link ${m.id===S.module?'selected':''}" data-page="${m.id}"><span class="rail-icon">${icon(m.icon,21)}</span><span class="rail-link-text">${m.name}<small>${m.en}</small></span><span class="rail-num">0${i+1}</span></button>`).join('');document.getElementById('breadcrumb').textContent=MODULES.find(m=>m.id===S.module)?.name||'五大业务入口';document.querySelector('#city-select').innerHTML=S.cities.map(c=>`<option value="${c.id}" ${S.city===c.id?'selected':''}>${c.name} · ${c.province}</option>`).join('');}
+function renderNavigation(){
+ const current=MODULES.find(m=>m.id===S.module);
+ const navigation=document.getElementById('nav');
+ // 一级首页不提供侧边栏；二级工作台的导航只包含当前模块自身的功能。
+ navigation.innerHTML=current?current.tabs.map(([id,label],i)=>`<button class="rail-link ${S.tabs[current.id]===id?'selected':''}" data-tab="${id}" aria-current="${S.tabs[current.id]===id?'page':'false'}"><span class="rail-icon rail-step">${String(i+1).padStart(2,'0')}</span><span class="rail-link-text">${label}<small>${current.en}</small></span><span class="rail-num">↗</span></button>`).join(''):'';
+ document.querySelector('.rail-heading').innerHTML=current?`${current.name} / 二级功能 <span>${String(current.tabs.length).padStart(2,'0')}</span>`:'';
+ document.getElementById('breadcrumb').textContent=current?`${current.name} / ${current.tabs.find(t=>t[0]===S.tabs[current.id])?.[1]||''}`:'一级首页';
+ document.querySelector('#city-select').innerHTML=S.cities.map(c=>`<option value="${c.id}" ${S.city===c.id?'selected':''}>${c.name} · ${c.province}</option>`).join('');
+ document.querySelector('.home-link').textContent='← 返回一级首页';
+}
+const allowedModule=id=>MODULES.some(m=>m.id===id);
+function routeState(){
+ const pieces=decodeURIComponent(location.hash.replace(/^#\/?/,'')).split('/').filter(Boolean);
+ const module=allowedModule(pieces[0])?pieces[0]:'home';
+ const def=MODULES.find(x=>x.id===module);
+ const tab=def?.tabs.some(([id])=>id===pieces[1])?pieces[1]:def?.tabs[0]?.[0];
+ return {module,tab};
+}
+function routeHref(module,tab){return module==='home'?'#/home':`#/${module}/${tab||MODULES.find(m=>m.id===module)?.tabs[0][0]}`;}
+function writeRoute(replace=false){
+ const href=routeHref(S.module,S.tabs[S.module]);
+ if(location.hash!==href)history[replace?'replaceState':'pushState'](null,'',href);
+}
+function syncRoute(){
+ const next=routeState();
+ S.module=next.module;
+ if(next.tab)S.tabs[next.module]=next.tab;
+ S.play=false;stopPlayback();
+ render();if(next.module==='simulation')loadTelemetry();
+}
+function selectTab(tab){
+ const def=MODULES.find(m=>m.id===S.module);
+ if(!def?.tabs.some(([id])=>id===tab))return;
+ S.tabs[S.module]=tab;
+ writeRoute();
+ if(S.module==='data'&&tab==='audit')get('/audit?limit=100').then(a=>{S.audits=a;render();}).catch(fail);
+ render();if(S.module==='simulation')loadTelemetry();
+}
 async function refresh(){const slug=encodeURIComponent(S.city);
   const [network,scenarios,overview]=await Promise.all([get(`/network?city_id=${slug}`),get(`/scenarios?city_id=${slug}`),get(`/overview?city_id=${slug}`)]);
   S.network=network;S.scenarios=scenarios;S.overview=overview;
@@ -48,12 +85,17 @@ async function loadScenario(){if(!S.scenarioId){S.tasks=[];S.plans=[];S.runs=[];
   S.report=S.runId?await get(`/simulations/${encodeURIComponent(S.runId)}/report`):null;
   S.telemetry=null;
 }
-function home(){const c=city(),r=run();return `<div class="portal">
- <div class="portal-hero"><div class="portal-copy"><div class="overline"><span class="overline-line"></span> AETHER OPERATIONS / SYSTEM ONLINE</div><div class="hero-tag">五大业务体系 · 城市级协同仿真</div><h1>联合投送<br><span>仿真决策平台</span></h1><p>从基础资源建模、任务想定、联合方案生成到动态行动推演与评估分析，构建可回溯、可复现的完整仿真决策链路。</p><div class="hero-buttons">${action('进入联合投送工作台 →','home-planning','primary')}${action('查看想定任务','home-scenario','light')}</div><div class="hero-sub">SIMULATION MODEL <b>v3.0</b><span>·</span> WGS84 CITY DATA <b>4 CITIES</b></div></div>
- <div class="portal-visual"><div class="orbit orbit-a"></div><div class="orbit orbit-b"></div><div class="orbit orbit-c"></div><div class="hero-grid"></div><div class="hero-globe">◈</div><div class="visual-card vc1"><span>GEOLOCATION</span><strong>${c?.name||'武汉'} / CHINA</strong><small>30°N · WGS84</small></div><div class="visual-card vc2"><span>SIMULATION / READY</span><strong>${nfmt(r?.metrics?.score,1)}<small>/100</small></strong><small>MONTE CARLO ENGINE</small></div><div class="visual-point vp1"></div><div class="visual-point vp2"></div><div class="visual-point vp3"></div></div></div>
- <div class="portal-intro"><div><div class="overline">OPERATIONAL WORKFLOW</div><h2>选择业务入口</h2></div><p>五个一级入口 · 每个模块内进入具体功能<br>从数据到决策，全流程闭环</p></div>
- <div class="module-grid">${MODULES.map((m,i)=>`<button class="module-card" data-page="${m.id}"><div class="module-head"><span class="module-count">0${i+1} / 05</span><span class="module-arrow">↗</span></div><div class="module-icon">${icon(m.icon,27)}</div><div class="module-meta">${m.en}</div><h3>${m.name}</h3><p>${m.desc}</p><div class="module-foot">${m.tabs.map(t=>`<span>${t[1]}</span>`).join('')}</div></button>`).join('')}</div>
- <div class="portal-bottom"><span><i class="signal-dot"></i> 全部模块已就绪</span><span>当前城市 ${c?.name||'--'} · ${S.network.nodes.length} 个设施节点 · ${S.network.vehicles.length} 台运载平台</span><span>仿真模型仅用于测试研究，不连接实车</span></div></div>`;}
+function home(){
+ return `<div class="portal-landing" aria-label="一级业务首页">
+  <div class="landing-glow landing-glow-a"></div><div class="landing-glow landing-glow-b"></div>
+  <div class="landing-inner">
+   <div class="landing-masthead"><div class="landing-brand"><span class="landing-logo">A<span>·</span></span><span><b>AETHER <em>3.1</em></b><small>凌航 · 联合投送仿真决策平台</small></span></div><div class="landing-indicator"><span class="landing-pulse"></span> SYSTEM ONLINE · 城市级协同仿真</div></div>
+   <div class="landing-intro"><div class="overline"><span class="overline-line"></span> SYSTEM DIRECTORY / 01</div><h1>联合投送<br><span>仿真决策平台</span></h1><p>请选择业务模块进入二级功能工作台</p></div>
+   <div class="landing-section-head"><span>一级功能入口 <b>PRIMARY MODULES</b></span><span>05 / 05</span></div>
+   <nav class="landing-modules" aria-label="五个一级功能入口">${MODULES.map((m,i)=>`<button type="button" class="landing-module" data-page="${m.id}" aria-label="进入${m.name}二级功能"><span class="landing-number">0${i+1}<span> / 05</span></span><span class="landing-module-icon">${icon(m.icon,31)}</span><span class="landing-module-info"><strong>${m.name}</strong><small>${m.en}</small></span><span class="landing-module-arrow" aria-hidden="true">↗</span></button>`).join('')}</nav>
+   <div class="landing-footer"><span>从左至右：基础数据 → 想定管理 → 联合投送方案 → 行动推演 → 评估分析</span><span>虚拟场景 · 合成仿真数据</span></div>
+  </div></div>`;
+}
 function dataModule(){const tab=S.tabs.data;let body='';const vehicles=S.network.vehicles,nodes=S.network.nodes,edges=S.network.edges;
   const filters=`<div class="toolbar"><input class="search-input" id="data-search" value="${txt(S.search)}" placeholder="⌕ 搜索名称 / 编号"><span class="muted">共 ${tab==='nodes'?nodes.length:tab==='edges'?edges.length:tab==='audit'?S.audits.length:vehicles.length} 条记录</span>${tab==='audit'?'':action('＋ 新增'+({nodes:'设施',edges:'通道',vehicles:'平台'}[tab]),'create-resource','primary')}</div>`;
   const search=(...values)=>values.some(x=>String(x).toLowerCase().includes(S.search.toLowerCase()));
@@ -119,7 +161,7 @@ function evaluationModule(){const tab=S.tabs.analytics,r=run(),m=r?.metrics||{};
  if(tab==='compare')content=panel('多次推演方案对比','选择至少两条历史记录进行对比（最多 8 条）',`<div class="compare-toolbar">${S.runs.map(x=>`<label><input type="checkbox" data-compare="${x.id}" ${S.compareIds.includes(x.id)?'checked':''}><span>${txt(x.id)} · ${nfmt(x.metrics.score,1)}分</span></label>`).join('')}</div><div class="compare-viz">${compareBars(S.runs.filter(x=>S.compareIds.includes(x.id)).slice(0,8))}</div>`);
  if(tab==='reports')content=panel('评估报告与数据归档','结果可导出为 JSON、CSV 或通过浏览器打印为 PDF',`<div class="reports-layout"><div class="report-cover"><div class="overline">AETHER / REPORT 3.0</div><h3>联合投送仿真<br>效能评估报告</h3><p>${txt(city()?.name)} · ${txt(scenario()?.name)}</p><div>方案编号 <b>${txt(S.planId||'—')}</b></div><div>推演编号 <b>${txt(S.runId||'—')}</b></div><div>结果评分 <b>${nfmt(m.score,1)} / 100</b></div></div><div class="report-actions"><h3>选择导出格式</h3><p>报告包括场景参数、运力配置、规划任务、随机种子、核心指标和推演样本。请勿将合成数据用于真实指挥。</p>${action('↓ 导出 JSON 全量归档','export-json','primary full')}${action('↓ 导出 CSV 统计样本','export-csv','light full')}${action('↓ 导出投送结果 JSON','export-delivery','light full')}${action('打印评估摘要 / PDF','print-report','ghost full')}</div></div>`);
  return `${heading('05 / PERFORMANCE ANALYTICS','评估分析','结合时效、成功率、载荷分配及可靠性进行综合评价，支持多轮对比与审计级导出。',scenarioPicker())}${stats([['综合评分',r?nfmt(m.score,1):'—','/ 100','当前推演评分','activity'],['任务成功率',r?nfmt(m.success_pct,1):'—','%','仿真成功交付','target'],['准点交付率',r?nfmt(m.on_time_pct,1):'—','%','按任务约束统计','clock'],['运力利用率',r?nfmt(m.fleet_utilization_pct,1):'—','%','平台总任务占比','truck']])}${tabs()}${content}`;}
-function render(){renderNavigation();let body=S.module==='home'?home():({data:dataModule,scenario:scenarioModule,planning:planningModule,simulation:simulationModule,analytics:evaluationModule}[S.module]||home)();root.innerHTML=body;document.getElementById('rail').classList.remove('open');if(root.querySelector('#geo-map'))requestAnimationFrame(renderMap);}
+function render(){document.querySelector('.shell').classList.toggle('portal-mode',S.module==='home');document.querySelector('.shell').classList.toggle('workspace-mode',S.module!=='home');renderNavigation();let body=S.module==='home'?home():({data:dataModule,scenario:scenarioModule,planning:planningModule,simulation:simulationModule,analytics:evaluationModule}[S.module]||home)();root.innerHTML=body;document.getElementById('rail').classList.remove('open');if(root.querySelector('#geo-map'))requestAnimationFrame(renderMap);}
 function showDialog(title,help,fields,kind,values={}){S.formMode=kind;modal.innerHTML=`<div class="modal-shade" data-act="close-modal"><div class="dialog" role="dialog" aria-modal="true" aria-label="${txt(title)}"><div class="dialog-header"><div><small>RESOURCE MANAGER</small><h2>${title}</h2></div><button class="icon-button" data-act="close-modal">✕</button></div><p>${help}</p><form id="resource-form" data-kind="${kind}" class="dialog-form">${fields}<div class="dialog-actions"><button type="button" class="button button-ghost" data-act="close-modal">取消</button><button class="button button-primary" type="submit">保存修改 →</button></div></form></div></div>`;}
 const input=(label,name,opts='')=>`<label>${label}<input name="${name}" ${opts} required></label>`;
 const select=(label,name,items)=>`<label>${label}<select name="${name}">${items.map(([v,n])=>`<option value="${txt(v)}">${txt(n)}</option>`).join('')}</select></label>`;
@@ -162,7 +204,7 @@ async function chooseCity(id){if(S.city===id)return;S.city=id;S.scenarioId='';S.
 async function chooseScenario(id){S.scenarioId=id;S.planId='';S.runId='';S.playMinute=0;await loadScenario();render();if(S.module==='simulation')await loadTelemetry();}
 async function generate(){const p=await post('/plans',{scenario_id:S.scenarioId,strategy:S.strategy,algorithm:S.algorithm});S.planId=p.id;await refresh();S.planId=p.id;S.runId='';render();alertUser(`新方案生成成功 · 已分配 ${p.summary_data.assigned_count}/${p.summary_data.task_count} 项任务`);}
 async function startSimulation(form){const v=Object.fromEntries(new FormData(form));S.seed=Number(v.seed);S.iterations=Number(v.iterations);S.planId=v.plan_id;const x=await post('/simulations',{plan_id:v.plan_id,seed:S.seed,iterations:S.iterations});await refresh();S.planId=v.plan_id;S.runId=x.id;S.playMinute=0;S.tabs.simulation='control';S.report=await get(`/simulations/${encodeURIComponent(S.runId)}/report`);render();await loadTelemetry();alertUser(`完成 ${x.iterations} 轮推演 · 综合评分 ${nfmt(x.metrics.score,1)}`);}
-function setPage(id){S.module=id;S.search='';S.play=false;stopPlayback();render();if(id==='simulation')loadTelemetry();window.scrollTo({top:0,behavior:'instant'});}
+function setPage(id){if(id!=='home'&&!allowedModule(id))return;S.module=id;S.search='';S.play=false;stopPlayback();writeRoute();render();if(id==='simulation')loadTelemetry();window.scrollTo({top:0,behavior:'instant'});}
 function stopPlayback(){clearInterval(S.interval);S.interval=0;}
 function play(){stopPlayback();if(!S.play)return;const end=Math.max(1,...(run()?.events||[]).map(e=>e.at_min));S.interval=setInterval(()=>{S.playMinute=Math.min(end,S.playMinute+.7*S.playSpeed);if(S.playMinute>=end){S.play=false;stopPlayback();}if(S.module==='simulation'){render();loadTelemetry();}},400);}
 function fileDownload(name,data,type='application/json'){const url=URL.createObjectURL(new Blob([data],{type}));const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
@@ -173,7 +215,7 @@ async function doAction(act,el){if(act==='close-modal'){hideDialog();return;}if(
  if(act==='delete-task'){if(!confirm('确定删除这项任务？历史方案快照仍然保留。'))return;await del(`/scenarios/${S.scenarioId}/tasks/${el.dataset.id}`);await refresh();render();alertUser('任务已删除');return;}
  if(act==='node-toggle'){const n=S.network.nodes.find(n=>n.id===el.dataset.id);await patch(`/network/nodes/${n.id}`,{status:n.status==='online'?'offline':'online'});await refresh();render();return;}
  if(act==='vehicle-toggle'){const v=S.network.vehicles.find(v=>v.id===el.dataset.id);await patch(`/vehicles/${v.id}`,{status:v.status==='available'?'maintenance':'available'});await refresh();render();return;}
- if(act==='go-conditions'){S.tabs.scenario='conditions';render();return;}if(act==='go-tasks'){S.tabs.scenario='tasks';render();return;}if(act==='go-formations'){S.tabs.scenario='formations';render();return;}
+ if(act==='go-conditions'){selectTab('conditions');return;}if(act==='go-tasks'){selectTab('tasks');return;}if(act==='go-formations'){selectTab('formations');return;}
  if(act==='generate'){await generate();return;}if(act==='go-simulation'){setPage('simulation');return;}
  if(act==='playback'){S.play=!S.play;play();render();await loadTelemetry();return;}
  if(act==='replay-reset'){S.play=false;stopPlayback();S.playMinute=0;render();await loadTelemetry();return;}
@@ -181,7 +223,7 @@ async function doAction(act,el){if(act==='close-modal'){hideDialog();return;}if(
  if(act==='export-json'){makeJson();return;}if(act==='export-delivery'){makeDelivery();return;}if(act==='export-csv'){makeCsv();return;}
  if(act==='print-report'){window.print();return;}}
 window.addEventListener('click',async e=>{const home=e.target.closest('[data-home]');if(home){setPage('home');return;}const page=e.target.closest('[data-page]');if(page){setPage(page.dataset.page);return;}
- const sub=e.target.closest('[data-tab]');if(sub){S.tabs[S.module]=sub.dataset.tab;if(S.module==='data'&&sub.dataset.tab==='audit'){try{S.audits=await get('/audit?limit=100');}catch(err){S.audits=[];fail(err);}}render();if(S.module==='simulation')await loadTelemetry();return;}
+ const sub=e.target.closest('[data-tab]');if(sub){selectTab(sub.dataset.tab);return;}
  const card=e.target.closest('[data-scenario]');if(card){try{await chooseScenario(card.dataset.scenario);}catch(err){fail(err)}return;}
  const choosePlan=e.target.closest('[data-plan]');if(choosePlan){S.planId=choosePlan.dataset.plan;S.runId=S.runs.find(x=>x.plan_id===S.planId)?.id||'';render();return;}
  const chooseRun=e.target.closest('[data-run]');if(chooseRun){S.runId=chooseRun.dataset.run;S.planId=run()?.plan_id||S.planId;S.report=await get(`/simulations/${encodeURIComponent(S.runId)}/report`);render();await loadTelemetry();return;}
@@ -214,6 +256,8 @@ window.addEventListener('submit',async e=>{e.preventDefault();try{if(e.target.id
  if(e.target.id==='login-form'){const a=Object.fromEntries(new FormData(e.target));await login(a.username,a.password);await refresh();render();return;}
  }catch(err){fail(err);}});
 window.addEventListener('keydown',e=>{if(e.key==='Escape')hideDialog();});
+window.addEventListener('popstate',syncRoute);
+window.addEventListener('hashchange',syncRoute);
 window.addEventListener('resize',()=>{if(root.querySelector('#geo-map'))renderMap();});
 (async()=>{try{if(!await initAuth()){root.innerHTML=`${heading('SECURE SYSTEM','用户身份认证','请使用获授权的账户进入工作台。')}<div class="login-panel"><form id="login-form"><label>用户名<input name="username" autocomplete="username" required></label><label>密码<input name="password" type="password" autocomplete="current-password" required></label><button class="button button-primary" type="submit">登录系统</button></form></div>`;return;}
- S.cities=await get('/cities');await refresh();S.compareIds=S.runs.slice(0,3).map(r=>r.id);render();}catch(err){console.error(err);root.innerHTML=`${heading('OFFLINE','系统尚未连接','后端接口无法访问，请确认服务已启动。')}<div class="empty-state">${txt(err.message)}<br><button class="button button-primary" onclick="location.reload()">重新连接</button></div>`;}})();
+ S.cities=await get('/cities');await refresh();S.compareIds=S.runs.slice(0,3).map(r=>r.id);const initial=routeState();S.module=initial.module;if(initial.tab)S.tabs[initial.module]=initial.tab;render();if(S.module==='simulation')loadTelemetry();}catch(err){console.error(err);root.innerHTML=`${heading('OFFLINE','系统尚未连接','后端接口无法访问，请确认服务已启动。')}<div class="empty-state">${txt(err.message)}<br><button class="button button-primary" onclick="location.reload()">重新连接</button></div>`;}})();

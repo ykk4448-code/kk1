@@ -4,7 +4,13 @@
 
 ## 五大一级业务入口
 
-首页是五入口门户，不再将所有功能放在同一个仪表盘。进入任一入口后，通过二级标签导航到具体业务：
+**严格两层页面结构**：
+
+1. **一级首页** (`/#/home`) 只显示五个可点击业务按钮：基础数据、想定管理、联合投送方案、行动推演、评估分析。不显示侧边业务菜单、城市选择或额外快捷按钮。
+2. **二级工作台**：点击某个一级入口后进入该模块的独立工作台。侧边栏只展示该模块的二级功能；手机端采用页内标签。顶部提供“← 返回一级首页”。
+3. **独立地址与浏览器历史**：如 `/#/scenario/tasks`、`/#/simulation/telemetry`，支持直接打开、刷新、后退、前进。
+
+二级页面及对应业务操作：
 
 | 一级入口 | 二级功能 | 可进行的操作 |
 |---|---|---|
@@ -106,3 +112,7 @@ node --check frontend/assets/app.js
 5. SQLite 增量迁移兼容旧字段，但大量并发、分布式部署应使用正式迁移与事务型数据库。
 
 详细说明：`docs/requirements.md`、`docs/simulation-model.md`、`docs/city-data.md`。
+
+### 二级页面导航验收
+
+可运行 `python scripts/build_preview.py` 生成不需要后端服务器的只读预览；如安装 Chromium 和 Playwright，运行 `python frontend/tests/test_navigation_browser.py` 可验证五个一级入口及二级菜单、浏览器历史和移动布局。业务接口和写入行为另由 `pytest backend/tests` 验证。
