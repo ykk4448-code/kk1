@@ -199,8 +199,8 @@ def create_edge(body:s.EdgeIn,db:Session=Depends(get_db),user:m.User=Depends(can
     if a.network_id=='civil-airdrop':
         shore_a='mainland' if a.id.startswith('AIR-MAIN-') else 'island' if a.id.startswith('AIR-ISLE-') else ''
         shore_b='mainland' if b.id.startswith('AIR-MAIN-') else 'island' if b.id.startswith('AIR-ISLE-') else ''
-        if body.transport_mode!='airdrop' or not shore_a or not shore_b or shore_a==shore_b:
-            raise HTTPException(status_code=422,detail='合成空投网络只允许大陆侧与台湾侧之间的直接空投示意通道')
+        if body.transport_mode!='airdrop' or body.terrain!='coastal' or not shore_a or not shore_b or shore_a==shore_b:
+            raise HTTPException(status_code=422,detail='合成空投网络只允许使用 coastal 类型的大陆侧与台湾侧直接空投示意通道')
     # Prevent ambiguous parallel edges in the bidirectional model.
     existing=db.scalar(select(m.Edge.id).where(
         ((m.Edge.source==body.source)&(m.Edge.target==body.target)) |
@@ -420,16 +420,23 @@ def create_plan(body:s.PlanIn,db:Session=Depends(get_db),user:m.User=Depends(can
         raise HTTPException(status_code=422,detail='民用空投想定仅允许直接空投通道、空投任务与无人机平台')
     configuration=normalize_configuration(scenario.configuration_data,vehicle_data)
     planned_vehicles=scenario_vehicles(configuration,vehicle_data)
-    result=sim.generate_plan(node_data,edge_data,planned_vehicles,task_data,
-                             s.ScenarioOut.model_validate(scenario).model_dump(mode='json'),
-                             body.strategy,body.algorithm)
+    if scenario.network_id!='civil-airdrop':
+        raise HTTPException(status_code=409,detail='当前工作台只支持民用空投方案；历史网络只读')
+    scenario_data=s.ScenarioOut.model_validate(scenario).model_dump(mode='json')
+    cloud_base='high' if scenario.visibility_km>=12 else 'medium' if scenario.visibility_km>=5 else 'low'
+    params=normalize_parameters({'weather':scenario.weather,'wind_kmh':scenario.wind_kmh,'cloud_base':cloud_base})
+    scenario_data.update({'weather':params['weather'],'wind_kmh':params['wind_kmh'],
+                          'visibility_km':params['visibility_km']})
+    params_snapshot=parameter_summary(params)
+    result=sim.generate_plan(node_data,edge_data,planned_vehicles,task_data,scenario_data,
+                             body.strategy,body.algorithm,experiment=params)
     plan=m.Plan(id='PLN-'+uuid4().hex[:8].upper(),scenario_id=scenario.id,
-                name=f'{scenario.name} · {dict(balanced="均衡",fastest="时效",safest="安全")[body.strategy]}方案',
+                name=f'{scenario.name} · {dict(balanced="均衡",fastest="时效",safest="稳健")[body.strategy]}方案',
                 strategy=body.strategy,algorithm=body.algorithm,
                 assignment_data=result['assignments'],summary_data=result['summary'],
-                snapshot_data={'scenario':s.ScenarioOut.model_validate(scenario).model_dump(mode='json'),
-                               'nodes':node_data,'edges':edge_data,'vehicles':planned_vehicles,
-                               'tasks':task_data,'configuration':configuration})
+                snapshot_data={'scenario':scenario_data,'nodes':node_data,'edges':edge_data,
+                               'vehicles':planned_vehicles,'tasks':task_data,'configuration':configuration,
+                               'experiment_data':params_snapshot})
     db.add(plan);note(db,user,'plan.generate',plan.id,body.model_dump());db.commit();db.refresh(plan)
     return plan
 
@@ -456,9 +463,10 @@ def start_simulation(body:s.RunIn,db:Session=Depends(get_db),user:m.User=Depends
         raise HTTPException(status_code=409, detail='缺少方案输入快照，无法保证推演的可重复性')
     result=sim.simulate({'assignments':plan.assignment_data,'summary':plan.summary_data},
                         snapshot['scenario'],snapshot['vehicles'],snapshot['nodes'],snapshot['edges'],
-                        seed=body.seed,iterations=body.iterations)
+                        seed=body.seed,iterations=body.iterations,experiment=snapshot.get('experiment_data'))
     run=m.SimulationRun(id='RUN-'+uuid4().hex[:8].upper(),plan_id=plan.id,scenario_id=scenario.id,
-                        seed=body.seed,iterations=body.iterations,**result)
+                        seed=body.seed,iterations=body.iterations,
+                        experiment_data=snapshot.get('experiment_data',{}),**result)
     db.add(run);note(db,user,'simulation.execute',run.id,body.model_dump());db.commit();db.refresh(run)
     return run
 
