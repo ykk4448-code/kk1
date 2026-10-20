@@ -7,7 +7,7 @@ class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class NodeIn(BaseModel):
-    network_id: str = Field(default='civil-airdrop', pattern=r'^[A-Za-z0-9_-]{1,30}
+    network_id: str = Field(default='civil-airdrop', pattern=r'^[A-Za-z0-9_-]{1,30}$')
     id: str = Field(min_length=2, max_length=40, pattern=r'^[A-Za-z0-9_-]+$')
     name: str = Field(min_length=2, max_length=80)
     category: Literal['hub','depot','critical','delivery','command']
@@ -84,7 +84,7 @@ class VehicleOut(ORMModel):
     status: str
 
 class ScenarioIn(BaseModel):
-    network_id: str = Field(default='civil-airdrop', pattern=r'^[A-Za-z0-9_-]{1,30}
+    network_id: str = Field(default='civil-airdrop', pattern=r'^[A-Za-z0-9_-]{1,30}$')
     name: str = Field(min_length=2, max_length=100)
     description: str = Field(default='', max_length=2000)
     weather: Literal['clear','rain','wind','fog'] = 'clear'
