@@ -1,0 +1,27 @@
+{
+  "china": {
+    "url": "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json",
+    "original_sha256": "99adfeded5223848bbe37a0a12f8023e11ee12161c7800521c27db42fdeac275",
+    "features": 35
+  },
+  "wuhan": {
+    "url": "https://geo.datav.aliyun.com/areas_v3/bound/420100_full.json",
+    "original_sha256": "f03865cc55cf8d4e3b6cb581fdb199ef0405bbad817c8a652e2b72414dcc5aeb",
+    "features": 13
+  },
+  "shanghai": {
+    "url": "https://geo.datav.aliyun.com/areas_v3/bound/310000_full.json",
+    "original_sha256": "f699513d5eb63d56350018d90db92345aeefc88c9e4f76197ea405178b6c31ae",
+    "features": 16
+  },
+  "chengdu": {
+    "url": "https://geo.datav.aliyun.com/areas_v3/bound/510100_full.json",
+    "original_sha256": "e5a5f52b38c8b073805da73bac7adad362ecc66d9f64a790aef20d6ec00cd9e1",
+    "features": 20
+  },
+  "shenzhen": {
+    "url": "https://geo.datav.aliyun.com/areas_v3/bound/440300_full.json",
+    "original_sha256": "e346a6cb0d5c482bf52fd0b845d0cda8c03a6ab666ce310afd3292a4d1899fa8",
+    "features": 9
+  }
+}

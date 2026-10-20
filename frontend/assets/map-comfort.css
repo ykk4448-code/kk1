@@ -1,0 +1,147 @@
+/* Reading hierarchy: one context row, one metric row, a generous map, optional evidence. */
+.map-workspace .workspace-business .badge.brand{display:inline-flex;min-height:0!important;height:auto!important;width:auto!important;flex:0 0 auto;padding:5px 8px!important;font-size:11px!important}
+.map-workspace:not(.workspace-has-assessment) .workspace-business .metrics{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important}
+.map-workspace:not(.workspace-has-assessment) .workspace-business .metric{min-height:83px!important;padding:11px!important}
+.map-workspace:not(.workspace-has-assessment) .workspace-business .metric-top{font-size:10px!important}
+.map-workspace:not(.workspace-has-assessment) .workspace-business .metric-value{font-size:22px!important;margin:5px 0!important}
+.map-workspace:not(.workspace-has-assessment) .workspace-business .metric-bottom{display:none}
+.workspace-business .map-context-card{padding:11px 14px;background:#f4f9fc}
+.workspace-business .map-context-card small{display:none}
+.workspace-business .workspace-disclosure,.workspace-business .scenario-catalog{border:1px solid #ccdce5;border-radius:7px;background:#fffffff2;margin:0 0 12px;overflow:hidden}
+.workspace-business :is(.workspace-disclosure,.scenario-catalog)>summary{cursor:pointer;padding:15px 16px;font:600 13px 'Microsoft YaHei',sans-serif;color:#2b5773;line-height:1.5}
+.workspace-business .workspace-disclosure[open]>summary,.workspace-business .scenario-catalog[open]>summary{border-bottom:1px solid #dbe6ed;background:#f3f8fb}
+.workspace-business .workspace-disclosure>.card{border:0!important;border-radius:0!important;margin:0!important}
+.workspace-business .scenario-catalog .scenario-list{border:0!important;padding:8px!important;max-height:340px;overflow:auto}
+.workspace-business .scenario-item{padding:14px!important;margin-bottom:8px}
+.workspace-business .scenario-item h3{font-size:14px!important}.workspace-business .scenario-item p{font-size:12px!important;line-height:1.65!important}
+.workspace-business .scenario-detail{padding:20px!important}.workspace-business .scenario-detail h3{font-size:20px!important;line-height:1.5!important}
+.workspace-business .detail-stat{padding:12px 0!important}.workspace-business .detail-stat b{font-size:16px!important}
+.workspace-business .plan-form{padding:18px!important;gap:16px!important}.workspace-business .plan-form>label{font-size:12px!important;line-height:1.6!important}
+.workspace-business .plan-controls .formula-note{padding:12px!important}.workspace-business .plan-controls .formula-note p{font-size:12px!important;line-height:1.7!important}
+.workspace-business .settings-form{padding:18px!important}.workspace-business .settings-form label{font-size:12px!important}
+.map-workspace .workspace-tools [data-workspace-tool=schedule],.map-workspace .workspace-tools [data-workspace-tool=stats]{display:none}
+.map-stage .geo-tile{filter:saturate(.63) contrast(.96)!important;opacity:.67!important}
+.workspace-has-assessment .run-setup summary{padding:0!important;min-height:18px}
+
+@media(min-width:1151px){
+ .map-workspace.workspace-has-assessment .workspace-business>.page-heading{right:610px}
+ .map-workspace.workspace-has-assessment .workspace-mode .topbar{width:180px!important}
+ .map-workspace.workspace-has-assessment .topbar .home-link{display:none!important}
+ .map-workspace.workspace-has-assessment .topbar .city-header{font-size:0!important}
+ .map-workspace.workspace-has-assessment .topbar select{max-width:150px;width:150px}
+ .map-workspace.workspace-has-assessment .assessment-toolbar{left:auto;right:218px;top:91px;width:380px;height:48px;min-height:48px!important;padding:7px 11px!important}
+ .map-workspace.workspace-has-assessment .assessment-toolbar .desk-title{display:none}
+ .map-workspace.workspace-has-assessment .desk-actions{display:flex!important;width:100%;justify-content:flex-end;gap:7px}
+ .map-workspace.workspace-has-assessment .desk-actions label{font-size:0!important;min-width:0;flex:1;gap:0!important}
+ .map-workspace.workspace-has-assessment .desk-actions select{width:100%;min-width:0;max-width:none;font-size:11px!important}
+ .map-workspace.workspace-has-assessment .desk-actions .button{white-space:nowrap;min-height:30px;padding:6px 9px!important}
+ .map-workspace.workspace-has-assessment .desk-kpis{top:151px;height:56px;padding:7px 0!important}
+ .map-workspace.workspace-has-assessment .desk-kpis>div>span{font-size:11px!important}
+ .map-workspace.workspace-has-assessment .desk-kpis b,.map-workspace.workspace-has-assessment .desk-kpis>div:first-child b{font-size:23px!important}
+ .map-workspace.workspace-has-assessment .desk-kpis>div>small{display:none!important}
+ .map-workspace.workspace-has-assessment .workspace-tools{top:223px;right:24px;width:auto;gap:6px;justify-content:flex-end}
+ .map-workspace.workspace-has-assessment .workspace-tools button{padding:8px 11px;font-size:11px}
+ .map-workspace.workspace-has-assessment .workspace-tools [data-workspace-tool=schedule],.map-workspace.workspace-has-assessment .workspace-tools [data-workspace-tool=stats]{display:block}
+ .map-workspace.workspace-has-assessment .workspace-tools [data-workspace-tool=panels]{font-size:0;width:34px;padding:8px}
+ .map-workspace.workspace-has-assessment .workspace-tools [data-workspace-tool=panels]:before{content:'▣';font-size:15px}
+ .map-workspace.workspace-has-assessment .mission-map-mode{left:365px;top:223px;width:208px!important}
+ .map-workspace.workspace-has-assessment .map-stage .geo-map-options{left:585px;right:395px;top:223px;min-height:34px;height:34px;padding:3px 9px;gap:10px}
+ .map-workspace.workspace-has-assessment .geo-map-options label{font-size:0}
+ .map-workspace.workspace-has-assessment .geo-map-options select{min-height:26px!important;height:26px;max-width:170px;width:170px;padding:3px 7px}
+ .map-workspace.workspace-has-assessment .schedule-panel{left:24px;top:270px!important;bottom:88px;width:320px}
+ .map-workspace.workspace-has-assessment .schedule-panel>header{height:46px!important;min-height:46px!important;padding:11px 14px!important}
+ .map-workspace.workspace-has-assessment .schedule-row{min-height:56px!important;padding:9px 12px!important;grid-template-columns:108px 1fr!important}
+ .map-workspace.workspace-has-assessment .schedule-ruler{grid-template-columns:108px 1fr!important}
+ .map-workspace.workspace-has-assessment .schedule-label b{font-size:12px!important}.map-workspace.workspace-has-assessment .schedule-label small{font-size:10px!important}
+ .map-workspace.workspace-has-assessment .schedule-panel .task-phases{display:none}
+ .map-workspace.workspace-has-assessment .ops-v7-inspector-toggle{display:none!important}
+ .map-workspace.workspace-has-assessment :is(.inspector-panel,.fleet-panel,.ops-v7-header){display:none!important;top:270px!important;bottom:88px;right:24px;width:320px!important}
+ .map-workspace.workspace-has-assessment.workspace-show-inspector .inspector-panel{display:flex!important}
+ .map-workspace.workspace-has-assessment.workspace-show-events .ops-v7-header{display:flex!important}
+ .map-workspace.workspace-has-assessment.workspace-show-fleet .fleet-panel{display:block!important}
+ .map-workspace.workspace-has-assessment .inspector-identity{padding:16px!important}
+ .map-workspace.workspace-has-assessment .inspector-facts>div{font-size:12px!important;padding:9px 0!important}
+ .map-workspace.workspace-has-assessment .inspector-metrics{padding:15px!important}
+ .map-workspace.workspace-has-assessment .inspector-position{font-size:12px!important;padding:13px 15px!important}
+ .map-workspace.workspace-has-assessment .selected-mission{font-size:12px!important}
+ .map-workspace.workspace-has-assessment .fleet-row{padding:12px!important;min-height:57px}
+ .map-workspace.workspace-has-assessment .fleet-row b{font-size:12px!important}
+ .map-workspace.workspace-has-assessment .map-stage .geo-controls{right:24px;top:270px}
+ .map-workspace.workspace-has-assessment .map-stage .geo-basemap-switch{left:365px;top:270px}
+ .map-workspace.workspace-has-assessment .desk-map-layers{left:365px;right:24px;bottom:88px;padding:7px 12px!important;height:35px!important;min-height:35px!important;gap:14px}
+ .map-workspace.workspace-has-assessment .desk-map-layers label{font-size:11px!important}
+ .map-workspace.workspace-has-assessment .desk-map-layers button{font-size:11px!important;min-height:23px;padding:3px 6px!important}
+ .map-workspace.workspace-has-assessment .trend-panel{display:none!important;left:365px;right:24px;bottom:88px;height:180px!important}
+ .map-workspace.workspace-has-assessment.workspace-show-stats .trend-panel{display:block!important}
+ .map-workspace.workspace-has-assessment.workspace-show-stats .desk-map-layers{bottom:280px}
+ .map-workspace.workspace-has-assessment .assessment-trend{height:125px!important}
+ .map-workspace.workspace-has-assessment .trend-legend{font-size:11px!important;padding:8px 14px 0!important}
+ .map-workspace.workspace-has-assessment .map-stage .geo-route-legend{display:none!important;left:365px;right:24px;bottom:135px;max-height:80px;padding:7px}
+ .map-workspace.workspace-has-assessment.workspace-show-legend .map-stage .geo-route-legend{display:flex!important}
+ .map-workspace.workspace-has-assessment.workspace-show-stats .map-stage .geo-route-legend{bottom:327px}
+ .map-workspace.workspace-has-assessment .ops-v7-player-top{display:none!important;bottom:76px;z-index:45}
+ .map-workspace.workspace-has-assessment.workspace-show-bookmarks .ops-v7-player-top{display:flex!important}
+ .map-workspace.workspace-has-assessment .desk-player{height:46px!important;min-height:46px!important;bottom:24px;padding:8px 14px!important}
+ .map-workspace.workspace-has-assessment .desk-player [data-workspace-tool=bookmarks]{font:11px 'Microsoft YaHei',sans-serif;border:1px solid #cadce6;border-radius:4px;background:#f3f8fb;color:#426a82;padding:4px 7px;white-space:nowrap}
+ .map-workspace.workspace-has-assessment .run-setup{left:24px;top:223px;width:320px;border-radius:6px;padding:8px 12px;margin:0;min-height:35px}
+ .map-workspace.workspace-has-assessment .run-setup summary{font-size:12px;white-space:nowrap}
+ .map-workspace.workspace-has-assessment .run-setup:not([open]) summary{display:flex;align-items:center;gap:8px;height:18px}
+ .map-workspace.workspace-has-assessment .run-setup summary>span{display:none}
+ .map-workspace.workspace-has-assessment .run-setup[open]{width:420px;max-height:65vh;padding:12px;z-index:50}
+ .map-workspace.workspace-has-assessment .run-setup[open] summary{padding-bottom:10px!important;height:auto}
+ .map-workspace.workspace-has-assessment .desk-data-note{left:365px;right:auto;top:270px;max-width:440px;padding:7px 10px;font-size:11px}
+ .map-workspace.workspace-has-assessment.workspace-hide-schedule .schedule-panel{display:none!important}
+ .map-workspace.workspace-has-assessment.workspace-hide-schedule .run-setup{display:none!important}
+ .map-workspace.workspace-has-assessment.workspace-hide-schedule :is(.mission-map-mode,.geo-basemap-switch,.desk-map-layers,.trend-panel,.geo-route-legend,.desk-data-note){left:24px!important}
+ .map-workspace.workspace-has-assessment.workspace-hide-schedule .geo-map-options{left:245px!important}
+ .map-workspace.workspace-has-assessment:is(.workspace-show-inspector,.workspace-show-events,.workspace-show-fleet,.workspace-show-shipments) :is(.desk-map-layers,.trend-panel,.geo-route-legend){right:365px!important}
+ .map-workspace.workspace-has-assessment:is(.workspace-show-inspector,.workspace-show-events,.workspace-show-fleet,.workspace-show-shipments) .map-stage .geo-controls{right:365px!important}
+ .map-workspace.workspace-has-assessment.map-panels-hidden :is(.schedule-panel,.inspector-panel,.fleet-panel,.ops-v7-header,.desk-kpis,.desk-map-layers,.trend-panel,.geo-route-legend,.desk-data-note,.run-setup){display:none!important}
+ .map-workspace.workspace-has-assessment.map-panels-hidden .mission-map-mode{left:24px;top:159px}
+ .map-workspace.workspace-has-assessment.map-panels-hidden .geo-map-options{left:245px;top:159px;right:395px;width:auto}
+ .map-workspace.workspace-has-assessment.map-panels-hidden .workspace-tools{top:159px}
+ .map-workspace.workspace-has-assessment.map-panels-hidden .geo-basemap-switch{left:24px;top:209px}
+ .map-workspace.workspace-has-assessment.map-panels-hidden .geo-controls{top:209px}
+ .map-workspace.workspace-has-assessment.map-panels-hidden .map-stage .geo-controls{right:24px!important}
+ .map-workspace.workspace-has-assessment.map-immersive .assessment-toolbar{top:16px;left:24px;right:auto;width:380px}
+ .map-workspace.workspace-has-assessment.map-immersive .desk-kpis{top:74px}
+ .map-workspace.workspace-has-assessment.map-immersive :is(.mission-map-mode,.geo-map-options,.workspace-tools,.run-setup){top:145px}
+ .map-workspace.workspace-has-assessment.map-immersive :is(.schedule-panel,.inspector-panel,.fleet-panel,.ops-v7-header){top:191px!important}
+ .map-workspace.workspace-has-assessment.map-immersive :is(.geo-controls,.geo-basemap-switch,.desk-data-note){top:191px}
+}
+@media(min-width:1151px) and (max-width:1500px){.map-workspace.workspace-has-assessment #geo-map-summary{display:none}.map-workspace.workspace-has-assessment .geo-map-options{justify-content:center}}
+@media(min-width:1151px) and (max-height:850px){
+ .map-workspace.workspace-has-assessment .map-stage .geo-map-options{top:198px}
+ .map-workspace.workspace-has-assessment .map-stage :is(.geo-controls,.geo-basemap-switch){top:244px}
+ .map-workspace.workspace-has-assessment .assessment-toolbar{top:80px;height:40px;min-height:40px!important}
+ .map-workspace.workspace-has-assessment .desk-kpis{top:132px;height:53px}
+ .map-workspace.workspace-has-assessment :is(.mission-map-mode,.geo-map-options,.workspace-tools,.run-setup){top:198px}
+ .map-workspace.workspace-has-assessment :is(.schedule-panel,.inspector-panel,.fleet-panel,.ops-v7-header){top:244px!important}
+ .map-workspace.workspace-has-assessment :is(.geo-controls,.geo-basemap-switch,.desk-data-note){top:244px}
+ .map-workspace.workspace-has-assessment.map-immersive .assessment-toolbar{top:16px}
+ .map-workspace.workspace-has-assessment.map-immersive .desk-kpis{top:66px}
+ .map-workspace.workspace-has-assessment.map-immersive :is(.mission-map-mode,.geo-map-options,.workspace-tools,.run-setup){top:130px}
+ .map-workspace.workspace-has-assessment.map-immersive :is(.schedule-panel,.inspector-panel,.fleet-panel,.ops-v7-header){top:176px!important}
+ .map-workspace.workspace-has-assessment.map-immersive .map-stage .geo-map-options{top:130px}
+ .map-workspace.workspace-has-assessment.map-immersive .map-stage :is(.geo-controls,.geo-basemap-switch){top:176px}
+}
+@media(max-width:1150px){.workspace-has-assessment [data-workspace-tool=legend],.workspace-has-assessment [data-workspace-tool=bookmarks]{display:none}}
+@media(min-width:760px) and (max-width:1150px){
+ .map-workspace.workspace-has-assessment .workspace-tools{display:none!important}
+ .map-workspace.workspace-has-assessment .map-stage .geo-map-options{right:24px!important}
+ body.workspace-has-assessment[data-workspace=simulation] .assessment-toolbar{padding-left:46px!important}
+ body.workspace-has-assessment[data-workspace=simulation] .assessment-toolbar .desk-title{display:none}
+ .workspace-has-assessment .run-setup:not([open]){left:24px!important;top:151px!important;width:34px!important;height:47px;padding:13px 8px;min-height:0;z-index:30}
+ .workspace-has-assessment .run-setup:not([open]) summary{font-size:0!important;display:flex;align-items:center;justify-content:center}
+ .workspace-has-assessment .run-setup:not([open]) summary>span{display:none}
+}
+@media(min-width:760px) and (max-width:1150px) and (max-height:850px){.workspace-has-assessment .run-setup:not([open]){top:128px!important;height:40px;padding:10px 8px}}
+@media(max-width:759px){
+ .map-workspace:not(.workspace-has-assessment) .workspace-business .metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .map-workspace:not(.workspace-has-assessment) .workspace-business .metric{min-height:65px!important;padding:9px 11px!important}
+ body.workspace-has-assessment[data-workspace=simulation] .assessment-toolbar{padding-left:46px!important}
+ .workspace-has-assessment .run-setup:not([open]){left:12px!important;top:169px!important;width:34px!important;height:37px;padding:8px!important;min-height:0;z-index:30}
+ .workspace-has-assessment .run-setup:not([open]) summary{font-size:0!important;display:flex;align-items:center;justify-content:center}
+ .workspace-has-assessment .run-setup:not([open]) summary>span{display:none}
+ .workspace-has-assessment .run-setup[open]{top:214px!important}
+}

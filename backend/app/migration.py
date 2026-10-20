@@ -1,14 +1,16 @@
 """Small additive SQLite compatibility upgrade for persistent v1 deployments.
 
-Never destroys historical user data. Old example coordinates are not accurate city
-geolocations; to get the new multi-city demo dataset, start with a NEW demo volume.
+Never destroys historical data. Independent geographic and regional profiles are
+seeded additively; historical XY snapshots retain their original coordinates.
 """
 from sqlalchemy import text
 from .database import engine
 
 ADD_COLUMNS={
-    'nodes': {'city_id': "VARCHAR(30) NOT NULL DEFAULT 'wuhan'", 'lon': 'FLOAT NOT NULL DEFAULT 114.3', 'lat': 'FLOAT NOT NULL DEFAULT 30.58'},
-    'scenarios': {'city_id': "VARCHAR(30) NOT NULL DEFAULT 'wuhan'", 'configuration_data': "JSON NOT NULL DEFAULT '{}'"},
+    'edges':{'transport_mode':"VARCHAR(16) NOT NULL DEFAULT 'road'"},
+    'delivery_tasks':{'shipment_id':"VARCHAR(40) NOT NULL DEFAULT ''",'leg_index':'INTEGER NOT NULL DEFAULT 1','predecessor_task_id':"VARCHAR(40) NOT NULL DEFAULT ''",'handover_min':'FLOAT NOT NULL DEFAULT 0','transport_mode':"VARCHAR(16) NOT NULL DEFAULT 'road'"},
+    'nodes': {'city_id': "VARCHAR(30) NOT NULL DEFAULT 'wuhan'", 'lon': 'FLOAT NOT NULL DEFAULT 114.3', 'lat': 'FLOAT NOT NULL DEFAULT 30.58', 'network_id': "VARCHAR(30) NOT NULL DEFAULT 'baseline'"},
+    'scenarios': {'city_id': "VARCHAR(30) NOT NULL DEFAULT 'wuhan'", 'configuration_data': "JSON NOT NULL DEFAULT '{}'", 'network_id': "VARCHAR(30) NOT NULL DEFAULT 'baseline'"},
 }
 
 def upgrade_schema():

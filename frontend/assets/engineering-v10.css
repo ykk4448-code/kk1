@@ -1256,3 +1256,66 @@ select option{background:#fff;color:#263f54}
  .workspace-mode .rail,.assessment .desk-player{display:none!important}
  .assessment,.workspace-mode .card,.workspace-mode .metric{border:1px solid #888!important}
 }
+
+/* Network overview: preserve the complete graph and distinguish concurrent missions. */
+/* One vector identity for the navigation, home page and application icon. */
+.workspace-mode .brand-mark,.landing-logo{display:inline-flex!important;align-items:center;justify-content:center;padding:0!important;background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:visible}
+.workspace-mode .brand-mark::before,.workspace-mode .brand-mark::after,.landing-logo::before,.landing-logo::after{content:none!important;display:none!important}
+.aether-brand-icon{display:block;width:100%;height:100%;object-fit:contain;flex-shrink:0}
+.workspace-mode .brand{gap:13px}
+.landing-logo{width:48px;height:48px;flex-shrink:0}
+.geo-shell{display:flex;flex-direction:column;min-width:0}
+.geo-map-options{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:#f8faf9;border-bottom:1px solid #e1e8e5;font-size:10px;flex-shrink:0;flex-wrap:wrap;color:#65777c}
+.geo-map-options b{font-size:12px;color:#314d58;font-variant-numeric:tabular-nums}
+.geo-map-options span>span{margin:0 4px;color:#b0bdbf}
+.geo-map-options label{display:flex;align-items:center;gap:7px;white-space:nowrap;margin:0}
+.geo-map-options select{padding:4px 6px;border:1px solid #d8e2e2;border-radius:4px;background:#fff;font:inherit;color:#344e5b;max-width:150px;min-height:27px}
+.geo-map-options select:focus-visible,.geo-route-legend button:focus-visible{outline:2px solid #276c86;outline-offset:2px}
+.geo-route-legend{display:flex;flex-wrap:wrap;gap:4px;padding:7px 10px;background:#fff;border-top:1px solid #e0e8e6;max-height:70px;overflow:auto;flex-shrink:0;scrollbar-width:thin;min-width:0}
+.geo-route-legend:empty{display:none}
+.geo-route-legend button{display:inline-flex;align-items:center;gap:5px;padding:4px 6px;background:#fff;color:#4f636b;border:1px solid transparent;border-radius:4px;font:600 9px/1.3 inherit;cursor:pointer;white-space:nowrap;min-height:26px}
+.geo-route-legend button i{width:15px;height:3px;background:var(--route-color);border-radius:3px;flex-shrink:0}
+.geo-route-legend button small{font-size:9px;color:#7c8f92;font-weight:400}
+.geo-route-legend button:hover{background:#f3f7f6;border-color:#dae5e2}
+.geo-route-legend button.active{background:#edf4f6;border-color:#bdcfd8;color:#273f4e}
+.geo-task-route{cursor:pointer;pointer-events:stroke}
+.geo-task-route:hover .geo-route-stroke{stroke-width:4;stroke-opacity:1}
+.geo-base-edge{pointer-events:stroke}
+.fleet-route-key{height:4px;width:13px;border-radius:3px;background:var(--route-color);flex-shrink:0}
+.desk-data-note{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#f0f5f6;border-bottom:1px solid #dce7e8;padding:10px 18px;color:#506972;font-size:11px;flex-shrink:0}
+.desk-data-note button{border:0;background:none;padding:3px 0;font:600 11px inherit;color:#25677c;cursor:pointer}
+.desk-data-note button:hover{text-decoration:underline}
+.schedule-row{border-left:3px solid var(--route-color,transparent)}
+.schedule-row .actual-bar{background:var(--route-color,#188d91)}
+.schedule-row .actual-bar.interrupted{background:#cf625c}
+.assessment-expanded .spatial-panel .geo-map{flex:1 1 0;min-height:120px}
+.assessment-expanded .geo-map-options{padding:5px 9px;gap:5px}
+.assessment-expanded .geo-route-legend{padding:4px 7px;max-height:62px}
+.assessment-expanded .map-legend{font-size:9px;padding:6px 8px;flex-shrink:0}
+@media(max-width:600px){
+ .geo-map-options{padding:7px 10px;gap:5px}
+ .geo-map-options label{font-size:9px}
+ .geo-route-legend{max-height:74px;padding:6px}
+ .geo-route-legend button{font-size:9px;padding:4px}
+ .desk-data-note{padding:10px 12px;line-height:1.6}
+}
+
+.assessment:has([data-map-mode="overview"][aria-pressed="true"]) .mission-focus{display:none}
+.assessment:has([data-map-mode="overview"][aria-pressed="true"]) .mission-route-legend{display:none}
+.geo-route-legend button{font-family:inherit;font-size:11px;font-weight:600;line-height:1.3}
+.geo-map-options{font-size:12px}.geo-map-options b{font-size:13px}
+.desk-data-note button{font-family:inherit;font-size:12px;font-weight:600}
+@media(min-width:1100px){
+ .assessment.assessment-expanded .desk-layout{height:calc(100dvh - 370px)!important;min-height:500px!important}
+ .assessment.assessment-expanded .spatial-panel{display:flex!important;flex-direction:column;min-height:0!important}
+ .assessment.assessment-expanded .spatial-panel>header{min-height:46px!important;height:46px!important;padding:8px 16px!important}
+ .assessment.assessment-expanded .mission-map-mode{min-height:39px;height:39px;padding:5px 14px!important;flex-shrink:0}
+ .assessment.assessment-expanded .desk-map-layers{height:36px!important;min-height:36px!important;padding:3px 12px!important;flex-shrink:0}
+ .assessment.assessment-expanded .spatial-panel .geo-shell{flex:1;min-height:0!important;height:0}
+ .assessment.assessment-expanded .spatial-panel .geo-map{flex:1 1 0;height:100%!important;min-height:150px!important}
+ .assessment.assessment-expanded .geo-route-legend{max-height:47px;padding:3px 7px}
+ .assessment.assessment-expanded .geo-route-legend button{font-size:10px;min-height:21px;padding:2px 4px}
+ .assessment.assessment-expanded .geo-map-options{min-height:33px;padding:3px 9px}
+ .assessment.assessment-expanded .geo-map-options select{min-height:24px;padding:2px 5px}
+ .assessment.assessment-expanded .map-legend{padding:4px 8px!important;font-size:9px!important;min-height:24px}
+}

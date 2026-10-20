@@ -23,6 +23,7 @@ class Node(Base):
     x: Mapped[float] = mapped_column(Float)
     y: Mapped[float] = mapped_column(Float)
     city_id: Mapped[str] = mapped_column(String(30), default="wuhan", index=True)
+    network_id: Mapped[str] = mapped_column(String(30), default='baseline', index=True)
     lon: Mapped[float] = mapped_column(Float, default=114.30)
     lat: Mapped[float] = mapped_column(Float, default=30.58)
     health: Mapped[int] = mapped_column(Integer, default=100)
@@ -35,6 +36,7 @@ class Edge(Base):
     target: Mapped[str] = mapped_column(ForeignKey('nodes.id'))
     distance_km: Mapped[float] = mapped_column(Float)
     risk: Mapped[float] = mapped_column(Float, default=0.05)
+    transport_mode: Mapped[str] = mapped_column(String(16), default='road')
     terrain: Mapped[str] = mapped_column(String(32), default='urban')
     status: Mapped[str] = mapped_column(String(20), default='open')
 
@@ -56,6 +58,7 @@ class Scenario(Base):
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
     city_id: Mapped[str] = mapped_column(String(30), default="wuhan", index=True)
+    network_id: Mapped[str] = mapped_column(String(30), default='baseline', index=True)
     description: Mapped[str] = mapped_column(Text, default='')
     weather: Mapped[str] = mapped_column(String(16), default='clear')
     wind_kmh: Mapped[float] = mapped_column(Float, default=5)
@@ -76,6 +79,11 @@ class DeliveryTask(Base):
     destination: Mapped[str] = mapped_column(ForeignKey('nodes.id'))
     deadline_min: Mapped[float] = mapped_column(Float)
     priority: Mapped[int] = mapped_column(Integer, default=2)
+    shipment_id: Mapped[str] = mapped_column(String(40), default='')
+    leg_index: Mapped[int] = mapped_column(Integer, default=1)
+    predecessor_task_id: Mapped[str] = mapped_column(String(40), default='')
+    handover_min: Mapped[float] = mapped_column(Float, default=0)
+    transport_mode: Mapped[str] = mapped_column(String(16), default='road')
     scenario: Mapped[Scenario] = relationship(back_populates='tasks')
 
 class Plan(Base):

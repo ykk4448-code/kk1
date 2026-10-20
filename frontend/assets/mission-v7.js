@@ -4,8 +4,8 @@
  */
 import {get} from './api.js';
 
-const EVENTS=new Set(['dispatch','arrived','failed','warning']);
-const EVENT_LABELS={dispatch:'任务派遣',arrived:'交付完成',failed:'任务中断',warning:'环境扰动'};
+const EVENTS=new Set(['dispatch','arrived','failed','warning','handover']);
+const EVENT_LABELS={handover:'港口接驳',dispatch:'任务派遣',arrived:'交付完成',failed:'任务中断',warning:'环境扰动'};
 const safe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const atLabel=value=>`T+${Math.max(0,Number(value)||0).toFixed(1)}`;
 export function normalizedEvents(data){

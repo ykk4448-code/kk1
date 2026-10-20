@@ -45,14 +45,14 @@ def delivery_report(run: dict, plan: dict) -> dict:
         end=final_by_code.get(a['code'])
         status='failed' if end and end['kind']=='failed' else 'delivered' if end else 'unknown'
         actual_end=end['at_min'] if end else None
-        deliveries.append({'code':a['code'],'cargo':a['cargo'],'vehicle_code':a['vehicle_code'],
+        deliveries.append({'task_id':a['task_id'],'shipment_id':a.get('shipment_id',''),'leg_index':a.get('leg_index',1),'transport_mode':a.get('transport_mode','road'),'code':a['code'],'cargo':a['cargo'],'vehicle_code':a['vehicle_code'],
           'origin':a['origin'],'destination':a['destination'],
           'weight_kg':tasks.get(a['task_id'],{}).get('weight_kg',a.get('weight_kg')),
           'planned_end_min':a['end_min'],'actual_end_min':actual_end,
           'deadline_min':a['deadline_min'],'status':status,
           'on_time':status=='delivered' and actual_end is not None and actual_end<=a['deadline_min'],
           'delay_min':round(max(0.,actual_end-a['deadline_min']),2) if actual_end is not None else None,
-          'distance_km':a['distance_km']})
+          'distance_km':0 if end and end.get('blocked') else a['distance_km']})
     unassigned=plan.get('summary_data',{}).get('unassigned',[])
     transport=[]
     for v in snapshot.get('vehicles',[]):
@@ -61,7 +61,7 @@ def delivery_report(run: dict, plan: dict) -> dict:
           'task_count':len(assigned), 'distance_km':round(sum(a['distance_km'] for a in assigned),2),
           'planned_work_min':round(sum(a['duration_min'] for a in assigned),2),
           'payload_capacity_kg':v['capacity_kg']})
-    return {'run_id':run['id'],'plan_id':plan['id'],'iterations':run['iterations'],
+    report={'run_id':run['id'],'plan_id':plan['id'],'iterations':run['iterations'],
        'sampling_note':'交付记录来自首次随机迭代，成功率/准点率为全轮次均值。',
        'totals':{'assigned':len(assignments),'unassigned':len(unassigned),
          'delivered':sum(d['status']=='delivered' for d in deliveries),
@@ -72,3 +72,12 @@ def delivery_report(run: dict, plan: dict) -> dict:
          'distance_km':round(sum(d['distance_km'] for d in deliveries),2)},
        'transport':transport,'deliveries':deliveries,'unassigned':unassigned,
        'metrics':run.get('metrics',{})}
+
+    if any(t.get('shipment_id') for t in tasks.values()):
+        from .replay import _mission_records
+        from .transport import shipment_projection
+        groups=shipment_projection(list(tasks.values()),_mission_records(plan,events),100000)
+        completed=[g for g in groups if g['status']=='delivered']
+        report['shipments']=groups
+        report['consignment_totals']={'count':len(groups),'delivered':len(completed),'failed':sum(g['status']=='failed' for g in groups),'on_time':sum(g['legs'][-1]['actual_end_min']<=g['legs'][-1]['deadline_min'] for g in completed),'weight_kg':sum(g['weight_kg'] for g in completed)}
+    return report

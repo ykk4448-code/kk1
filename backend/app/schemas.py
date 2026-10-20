@@ -7,12 +7,13 @@ class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class NodeIn(BaseModel):
+    network_id: str = Field(default='baseline', pattern=r'^[A-Za-z0-9_-]{1,30}$')
     id: str = Field(min_length=2, max_length=40, pattern=r'^[A-Za-z0-9_-]+$')
     name: str = Field(min_length=2, max_length=80)
-    category: Literal['hub','depot','critical','delivery','command']
+    category: Literal['hub','depot','critical','delivery','command','port']
     x: float = Field(ge=0, le=100)
     y: float = Field(ge=0, le=100)
-    city_id: str = Field(default="wuhan", pattern="^(wuhan|shanghai|chengdu|shenzhen)$")
+    city_id: str = Field(default="wuhan", pattern="^(national|wuhan|shanghai|chengdu|shenzhen)$")
     lon: float | None = Field(default=None, ge=73, le=135)
     lat: float | None = Field(default=None, ge=18, le=54)
     health: int = Field(default=100, ge=0, le=100)
@@ -29,6 +30,7 @@ class EdgeIn(BaseModel):
     target: str
     distance_km: float = Field(gt=0, le=10000)
     risk: float = Field(default=0.05, ge=0, le=0.95)
+    transport_mode: Literal['road','sea'] = 'road'
     terrain: Literal['urban','coastal','mountain','rural'] = 'urban'
     @model_validator(mode='after')
     def no_loop(self):
@@ -39,14 +41,15 @@ class EdgeIn(BaseModel):
 class VehicleIn(BaseModel):
     code: str = Field(min_length=3, max_length=40)
     name: str = Field(min_length=2, max_length=80)
-    category: Literal['ugv','drone']
+    category: Literal['ugv','drone','truck','ship']
     capacity_kg: float = Field(gt=0, le=100000)
     speed_kmh: float = Field(gt=0, le=350)
-    range_km: float = Field(gt=0, le=5000)
+    range_km: float = Field(gt=0, le=20000)
     reliability: float = Field(ge=0, le=1)
     home_node: str
 
 class NodeOut(ORMModel):
+    network_id: str = 'baseline'
     id: str
     name: str
     category: str
@@ -64,6 +67,7 @@ class EdgeOut(ORMModel):
     target: str
     distance_km: float
     risk: float
+    transport_mode: str = 'road'
     terrain: str
     status: str
 
@@ -80,7 +84,8 @@ class VehicleOut(ORMModel):
     status: str
 
 class ScenarioIn(BaseModel):
-    city_id: str = Field(default="wuhan", pattern="^(wuhan|shanghai|chengdu|shenzhen)$")
+    network_id: str = Field(default='baseline', pattern=r'^[A-Za-z0-9_-]{1,30}$')
+    city_id: str = Field(default="wuhan", pattern="^(national|wuhan|shanghai|chengdu|shenzhen)$")
     name: str = Field(min_length=2, max_length=100)
     description: str = Field(default='', max_length=2000)
     weather: Literal['clear','rain','wind','fog'] = 'clear'
@@ -95,6 +100,7 @@ class ScenarioPatch(BaseModel):
     visibility_km: float | None = Field(default=None, ge=0.1, le=60)
 
 class ScenarioOut(ORMModel):
+    network_id: str = 'baseline'
     id: str
     city_id: str
     name: str
@@ -124,11 +130,16 @@ class ConfigurationPatch(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
 class TaskIn(BaseModel):
+    shipment_id: str = Field(default='',max_length=40)
+    leg_index: int = Field(default=1,ge=1,le=20)
+    predecessor_task_id: str = Field(default='',max_length=40)
+    handover_min: float = Field(default=0,ge=0,le=1440)
+    transport_mode: Literal['road','sea'] = 'road'
     cargo: str = Field(min_length=2, max_length=90)
     weight_kg: float = Field(gt=0, le=5000)
     origin: str
     destination: str
-    deadline_min: float = Field(gt=0, le=1440)
+    deadline_min: float = Field(gt=0, le=43200)
     priority: int = Field(default=2, ge=1, le=3)
     @model_validator(mode='after')
     def different_nodes(self):
@@ -139,10 +150,15 @@ class TaskIn(BaseModel):
 class TaskPatch(BaseModel):
     cargo: str | None = Field(default=None, min_length=2, max_length=90)
     weight_kg: float | None = Field(default=None, gt=0, le=5000)
-    deadline_min: float | None = Field(default=None, gt=0, le=1440)
+    deadline_min: float | None = Field(default=None, gt=0, le=43200)
     priority: int | None = Field(default=None, ge=1, le=3)
 
 class TaskOut(ORMModel):
+    shipment_id: str = ''
+    leg_index: int = 1
+    predecessor_task_id: str = ''
+    handover_min: float = 0
+    transport_mode: str = 'road'
     id: str
     scenario_id: str
     code: str

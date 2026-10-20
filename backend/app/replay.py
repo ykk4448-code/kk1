@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from math import isfinite
+from .transport import shipment_projection
 
 
 def _number(value):
@@ -28,7 +29,7 @@ def _mission_records(plan, events):
         outcome = next((e for e in evidence if e['kind'] in ('arrived', 'failed')), None)
         start = dispatch['at_min'] if dispatch else assignment['start_min']
         end = outcome['at_min'] if outcome else assignment['end_min']
-        records.append({**assignment, 'actual_start_min': start,
+        records.append({**assignment, 'distance_km':0 if outcome and outcome.get('blocked') else assignment['distance_km'], 'actual_start_min': start,
                         'actual_end_min': outcome['at_min'] if outcome else None,
                         'replay_end_min': max(start, end),
                         'outcome': outcome['kind'] if outcome else 'unknown',
@@ -150,6 +151,7 @@ def assessment_projection(run: dict, plan: dict, minute: float = 0) -> dict:
             'total_tasks': total, 'timeline': timeline, 'trend': trend, 'events': events,
             'network': {k: snapshot.get(k, []) for k in ('nodes', 'edges', 'vehicles')},
             'tasks': snapshot.get('tasks', []),
+            'shipments': shipment_projection(snapshot.get('tasks',[]),timeline,minute),
             'telemetry': telemetry_at(run, plan, minute),
             'report': delivery_report(run, plan), 'metrics': run.get('metrics', {}),
             'iterations': run.get('iterations', 1), 'seed': run.get('seed'),

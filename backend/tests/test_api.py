@@ -7,11 +7,11 @@ def test_auth_required_and_login(client):
 
 def test_demo_data_integrity(client,admin_headers):
     scenarios=client.get(BASE+'/scenarios',headers=admin_headers).json()
-    assert len(scenarios)==5
+    assert len(scenarios)==7
     network=client.get(BASE+'/network',headers=admin_headers).json()
-    assert len(network['nodes'])==39 and len(network['edges'])==63 and len(network['vehicles'])==26
+    assert len(network['nodes'])==96 and len(network['edges'])>=161 and len(network['vehicles'])==67
     runs=client.get(BASE+'/simulations',headers=admin_headers).json()
-    assert len(runs)==5
+    assert len(runs)==11
     assert all(len(r['samples'])==80 for r in runs)
 
 def test_end_to_end_plan_and_simulation(client,admin_headers):
@@ -70,7 +70,7 @@ def test_catalog_create_and_conflict_detection(client,admin_headers):
         'code':'UGV-999','name':'新增实验运输车','category':'ugv','capacity_kg':600,'speed_kmh':55,
         'range_km':210,'reliability':.97,'home_node':'TEST_HUB'})
     assert vehicle.status_code==201,vehicle.text
-    assert len(client.get(BASE+'/network',headers=admin_headers).json()['vehicles'])==27
+    assert len(client.get(BASE+'/network',headers=admin_headers).json()['vehicles'])==68
 
 def test_plan_snapshot_reproducibility(client,admin_headers):
     plan=client.post(BASE+'/plans',headers=admin_headers,json={'scenario_id':'SCN-001'}).json()

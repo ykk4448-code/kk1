@@ -1,0 +1,315 @@
+/* Geographic canvas is the floor. Navigation, editing and replay are separate surfaces. */
+html:has(body.map-workspace),body.map-workspace{height:100%;overflow:hidden;background:#dcebf0}
+.map-workspace .shell{display:block!important;min-height:100dvh;background:transparent!important}
+.map-workspace .workframe{display:contents!important}
+.map-workspace .page{position:static!important;padding:0!important;margin:0!important;background:transparent!important;min-height:0!important}
+.map-stage{position:fixed;inset:0;z-index:0;overflow:hidden;background:#dcebf0}
+.map-stage .geo-shell{position:absolute;inset:0;display:block;min-height:0!important;background:transparent}
+.map-stage .geo-map{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;border:0!important;touch-action:none;cursor:grab;outline:none;background:#dcebf0!important}
+.map-stage .geo-map:focus-visible{outline:2px solid #438bb1;outline-offset:-3px}
+.map-stage .geo-grid{background:#dcebf0!important;inset:0}
+.geo-basemap{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.geo-region-label{font:500 12px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#839ba6;paint-order:stroke;stroke:#f5faf7;stroke-width:3px;stroke-linejoin:round;letter-spacing:1px}
+.geo-city-reference{pointer-events:all;cursor:pointer;fill:#2b7996}
+.geo-city-reference text{font:600 13px 'Microsoft YaHei',sans-serif;fill:#205c77;paint-order:stroke;stroke:#fff;stroke-width:3px}
+.map-stage .geo-tiles{position:absolute;inset:0;z-index:2;pointer-events:none;background:transparent!important}
+.map-stage .geo-tile{position:absolute;width:var(--tile-size)!important;height:var(--tile-size)!important;filter:saturate(.78)!important;opacity:.92}
+.map-stage .geo-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:4;overflow:hidden;pointer-events:none}
+.map-stage .geo-pin,.map-stage .geo-moving,.map-stage .geo-task-route{pointer-events:all}
+.geo-legacy-frame{fill:#f8fcfd;fill-opacity:.97;stroke:#91aebe;stroke-dasharray:6 4;stroke-width:1.5}
+.geo-legacy-title{font:600 12px 'Microsoft YaHei',sans-serif;fill:#526f84}
+.map-stage .geo-controls{position:absolute;top:178px;right:24px;z-index:11;box-shadow:0 3px 12px #173b5c14;border:1px solid #c3d5df;border-radius:7px;background:#ffffffed}
+.map-stage .geo-controls button{width:38px;height:36px;font-size:21px;color:#2f6380;border-color:#d9e5eb}
+.map-stage .geo-controls button[data-map=nation]{font:600 11px 'Microsoft YaHei',sans-serif}
+.map-stage .geo-city-label{position:absolute;left:auto;right:76px;top:176px;background:#fffffff0;border-color:#c6dae3;border-radius:6px;font-size:11px;padding:8px 11px;z-index:10;box-shadow:0 3px 12px #244f6810}
+.map-stage .geo-city-label small{font-size:9px;color:#7291a5}
+.geo-basemap-switch{position:absolute;right:24px;top:137px;display:flex;gap:0;z-index:12;background:#fffffff0;border:1px solid #c4d8e1;border-radius:5px;overflow:hidden}
+.geo-basemap-switch button{border:0;padding:7px 11px;background:transparent;color:#5d7d91;font:12px 'Microsoft YaHei',sans-serif;cursor:pointer}
+.geo-basemap-switch button[aria-pressed=true]{background:#295f7e;color:#fff}
+.geo-tile-state{position:absolute;bottom:43px;right:24px;z-index:12;background:#ffffffeb;color:#5b7d90;border-radius:4px;font-size:11px;padding:5px 9px;pointer-events:none}
+.geo-tile-state:empty{display:none}
+.map-stage .geo-map-options{position:fixed;left:548px;right:76px;top:151px;width:auto;min-height:35px;z-index:12;border:1px solid #d0e0e6;border-radius:6px;background:#ffffffee;box-shadow:0 3px 12px #244f680c;gap:14px;font-size:11px;max-width:520px}
+.map-stage .geo-map-options label{font-size:10px}.map-stage .geo-map-options select{font-size:11px;padding:4px 6px}
+.map-stage .geo-route-legend{position:fixed;bottom:69px;left:548px;right:76px;z-index:12;max-height:63px;border:1px solid #d0e0e6;border-radius:6px;background:#ffffffef;padding:5px 7px}
+.map-stage .geo-route-legend button{font-size:10px;padding:3px 5px;min-height:23px}
+.map-stage .map-legend{display:none!important}
+.map-stage .geo-scale{position:absolute;left:auto;right:23px;bottom:25px;z-index:12;padding:4px 7px;font-size:10px;background:#ffffffe0;max-width:50%;border-radius:3px;pointer-events:none}
+.map-stage .geo-attribution{position:absolute;right:23px;bottom:6px;z-index:12;background:#ffffffe6;padding:2px 5px;font-size:9px;color:#5e7c8c;max-width:80%;border-radius:3px}
+.map-stage .geo-attribution a{color:#3e687f}
+.workspace-layer{position:fixed;inset:0;z-index:5;pointer-events:none}
+.workspace-business{position:fixed;top:160px;left:24px;bottom:26px;width:480px;overflow:auto;scrollbar-width:thin;padding:0 0 52px;pointer-events:auto;overscroll-behavior:contain}
+.workspace-business>.page-heading{position:fixed!important;top:91px;left:24px;right:398px;min-height:48px;height:48px;padding:9px 14px!important;margin:0!important;display:flex!important;align-items:center;gap:20px;background:#fffffff0;border:1px solid #d0dfe7;border-radius:7px;box-shadow:0 3px 15px #264c6a0b;z-index:20}
+.workspace-business>.page-heading h1{font-size:22px!important;line-height:1.2;margin:0!important;letter-spacing:0!important;white-space:nowrap}
+.workspace-business>.page-heading p,.workspace-business>.page-heading .overline{display:none!important}
+.workspace-business>.page-heading .heading-side{margin-left:auto;min-width:0;max-width:70%}
+.workspace-business .header-filter{display:flex;align-items:center;gap:8px;font-size:10px}
+.workspace-business .header-filter select{max-width:320px;min-width:0;width:100%;height:31px;font-size:11px!important;padding:4px 8px!important}
+.workspace-business .metrics{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;padding:0;margin:0 0 10px!important;background:transparent!important;border:0!important}
+.workspace-business .metric{min-height:105px!important;padding:13px!important;background:#ffffffef!important;border:1px solid #d2e0e7!important;border-radius:7px!important;box-shadow:0 3px 16px #264c6a07!important}
+.workspace-business .metric-value{font-size:25px!important}.workspace-business .metric-top{font-size:11px!important}
+.workspace-business .metric-bottom{font-size:10px!important}.workspace-business .metric-icon{display:none}
+.workspace-business .subnav{display:none!important}
+.workspace-business .card,.workspace-business .scenario-detail,.workspace-business .scenario-list,.workspace-business .mission-form{background:#fffffff2!important;border:1px solid #d1dfe6!important;border-radius:7px!important;box-shadow:0 4px 20px #264c6a0a!important;overflow:hidden}
+.workspace-business .card{margin-bottom:10px!important}
+.workspace-business .card-head{padding:13px 15px!important}.workspace-business .card-head h2{font-size:14px!important}.workspace-business .card-head small{font-size:10px!important}
+.workspace-business :is(.workspace-layout,.data-layout,.scenario-layout,.analytics-grid,.two-column,.route-layout){display:block!important;gap:10px}
+.workspace-business :is(td,th){font-size:12px!important;padding:11px 12px!important}
+.workspace-business .table-wrap{overflow:auto!important}.workspace-business .toolbar{padding:11px 13px!important;gap:8px}
+.workspace-business .search-input{min-width:0;font-size:12px!important}.workspace-business .button{font-size:11px!important;padding:8px 10px!important}
+.workspace-business .table-wrap table{min-width:600px}
+.map-context-card{display:flex;flex-wrap:wrap;gap:7px 15px;background:#fffffff0;border:1px solid #d1dfe6;border-radius:7px;padding:13px 15px;margin-bottom:10px;color:#496c82}
+.map-context-card b{font-size:13px}.map-context-card small{font-size:11px;flex-basis:100%;order:2;color:#7c949f}.map-context-card .toggle{margin-left:auto;font-size:11px}
+.workspace-sheet-wide:not(.workspace-has-assessment) .workspace-business{width:min(920px,calc(100vw - 108px))}
+.map-workspace .workspace-mode .rail{position:fixed!important;top:12px!important;left:24px!important;right:24px!important;bottom:auto!important;width:auto!important;height:66px!important;min-height:66px!important;padding:0 18px!important;margin:0!important;display:flex!important;align-items:center!important;border:1px solid #6f99b245!important;border-radius:9px!important;z-index:60;background:linear-gradient(105deg,#173b5cf5,#27627ff5)!important;box-shadow:0 5px 22px #173b5c1a!important;backdrop-filter:blur(14px)}
+.map-workspace .workspace-mode .rail-heading,.map-workspace .workspace-mode .rail-footer{display:none!important}
+.map-workspace .workspace-mode .brand{flex:0 0 220px;min-height:64px!important;width:220px!important;gap:11px!important;align-self:center!important;pointer-events:auto}
+.map-workspace .workspace-mode .brand-mark{width:42px!important;height:42px!important;min-width:42px!important}
+.map-workspace .workspace-mode .brand-words strong{font-size:19px!important;letter-spacing:.08em!important}
+.map-workspace .workspace-mode .brand-words strong em{font-size:9px!important;padding:2px 4px}
+.map-workspace .workspace-mode .brand-words small{font-size:9px!important;margin-top:4px!important}
+.map-workspace .workspace-mode #nav{display:flex!important;flex:1;justify-content:center;gap:4px!important;min-width:0;overflow:auto;scrollbar-width:none;padding:0!important;margin:0!important}
+.map-workspace .workspace-mode .rail-link{position:relative;display:flex!important;align-items:center;gap:7px!important;width:auto!important;min-width:90px;height:43px!important;min-height:43px!important;padding:8px 11px!important;border:0!important;border-radius:5px!important;flex:0 0 auto;justify-content:center;color:#e0edf5!important;background:transparent!important;font-size:12px!important}
+.map-workspace .workspace-mode .rail-link.selected{color:#164967!important;background:#edf6fb!important;box-shadow:inset 0 -3px #80bfcc!important}
+.map-workspace .workspace-mode .rail-link-text{font-size:12px!important;white-space:nowrap}
+.map-workspace .workspace-mode .rail-link-text small,.map-workspace .workspace-mode .rail-num{display:none!important}
+.map-workspace .workspace-mode .rail-icon{width:auto!important;height:auto!important;font-size:9px!important;opacity:.65;background:transparent!important}
+.map-workspace .workspace-mode .topbar{position:fixed!important;top:91px!important;right:24px!important;left:auto!important;width:360px!important;height:48px!important;min-height:48px!important;margin:0!important;padding:0 13px!important;z-index:25;background:#fffffff0!important;border:1px solid #d0dfe7!important;border-radius:7px!important;box-shadow:0 3px 15px #264c6a0b!important}
+.map-workspace .topbar :is(.separator,#breadcrumb,.top-technical,.top-vertical,.user-avatar,.menu-button){display:none!important}
+.map-workspace .topbar .top-left{flex:1;min-width:0}.map-workspace .topbar .top-right{gap:4px}
+.map-workspace .topbar .home-link{font-size:11px!important;white-space:nowrap;padding:4px!important}
+.map-workspace .topbar .city-header{font-size:10px!important;gap:5px}.map-workspace .topbar select{font-size:11px!important;min-height:28px!important;height:28px!important;max-width:145px}
+.workspace-tools{position:fixed;bottom:31px;left:35px;z-index:40;display:flex;gap:5px;pointer-events:auto}
+.workspace-tools button,.workspace-mobile-tabs button{border:1px solid #c9dce6;border-radius:5px;background:#fffffff2;color:#456e87;font:600 11px 'Microsoft YaHei',sans-serif;padding:7px 10px;cursor:pointer;box-shadow:0 2px 8px #214b6508}
+.workspace-tools button[aria-pressed=true],.workspace-mobile-tabs button[aria-pressed=true]{background:#265d7b;color:#fff;border-color:#265d7b}
+body:not(.workspace-has-assessment) .workspace-tools :is([data-workspace-tool=events],[data-workspace-tool=fleet],[data-workspace-tool=inspector]){display:none}
+.workspace-mobile-tabs{display:none}
+
+/* Assessment reuses the same geographic canvas; no map is nested inside a card. */
+.workspace-has-assessment .workspace-business{display:contents!important;pointer-events:none}
+.workspace-has-assessment #assessment,.workspace-has-assessment #desk-content,.workspace-has-assessment .desk-layout,.workspace-has-assessment .desk-bottom{display:contents!important;background:none!important;border:0!important;box-shadow:none!important}
+.workspace-has-assessment .assessment-toolbar{position:fixed!important;top:151px;left:24px;right:24px;height:47px;min-height:47px!important;background:#fffffff0!important;border:1px solid #d0dfe7!important;border-radius:7px;padding:8px 14px!important;z-index:21;pointer-events:auto;box-shadow:0 3px 15px #264c6a0b}
+.workspace-has-assessment .desk-title{gap:8px}.workspace-has-assessment .desk-title strong{font-size:13px!important}.workspace-has-assessment .desk-title small{font-size:10px!important}.workspace-has-assessment .desk-symbol{width:28px;height:28px}
+.workspace-has-assessment .desk-actions{gap:7px}.workspace-has-assessment .desk-actions select{font-size:11px!important;height:30px;max-width:300px}.workspace-has-assessment .desk-actions label{font-size:10px!important}
+.workspace-has-assessment .desk-actions .button{font-size:10px!important;padding:7px 10px!important}
+.workspace-has-assessment .desk-kpis{position:fixed!important;top:210px;left:24px;right:24px;height:60px;padding:7px 0!important;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;background:#fffffff2!important;border:1px solid #d0dfe7!important;border-radius:7px;z-index:20;pointer-events:auto;box-shadow:0 3px 15px #264c6a0b}
+.workspace-has-assessment .desk-kpis>div{padding:0 17px!important;gap:2px;min-width:0;border-right:1px solid #e0e9ee;grid-column:auto!important}
+.workspace-has-assessment .desk-kpis>div:last-child{border-right:0}.workspace-has-assessment .desk-kpis>div>span{font-size:10px!important}.workspace-has-assessment .desk-kpis>div>small{font-size:8px!important;color:#6c8799}.workspace-has-assessment .desk-kpis b{font-size:22px!important;line-height:1.1!important}.workspace-has-assessment .desk-kpis b small{font-size:10px!important}
+.workspace-has-assessment .schedule-panel,.workspace-has-assessment .inspector-panel,.workspace-has-assessment .fleet-panel,.workspace-has-assessment .ops-v7-header,.workspace-has-assessment .trend-panel{position:fixed!important;border:1px solid #cbdde7!important;border-radius:7px!important;background:#fffffff2!important;box-shadow:0 4px 20px #264c6a0e!important;z-index:15;pointer-events:auto;overflow:hidden}
+.workspace-has-assessment .schedule-panel{left:24px;top:283px;bottom:248px;width:298px;display:flex!important;flex-direction:column}
+.workspace-has-assessment .inspector-panel{right:24px;top:324px;bottom:248px;width:280px;display:flex!important;flex-direction:column}
+.workspace-has-assessment .desk-panel>header{height:41px!important;min-height:41px!important;padding:8px 12px!important;flex-shrink:0;background:#f5f9fb}
+.workspace-has-assessment .desk-panel>header b{font-size:13px!important}.workspace-has-assessment .desk-panel>header small{font-size:8px!important}
+.workspace-has-assessment #desk-schedule{flex:1;min-height:0;display:flex;flex-direction:column}
+.workspace-has-assessment .schedule-tools{padding:9px!important;gap:6px}.workspace-has-assessment .schedule-tools input{width:52%;font-size:10px!important;height:30px!important}.workspace-has-assessment .schedule-tools select{font-size:10px!important;height:30px!important;padding:4px!important;width:45%}
+.workspace-has-assessment .schedule-ruler,.workspace-has-assessment .schedule-row{grid-template-columns:98px 1fr!important}
+.workspace-has-assessment .schedule-row{min-height:44px!important;padding:7px 9px!important}.workspace-has-assessment .schedule-label b{font-size:11px!important}.workspace-has-assessment .schedule-label small{font-size:9px!important}.workspace-has-assessment .schedule-ruler{font-size:9px!important;padding:6px 9px!important}
+.workspace-has-assessment .schedule-scroll{flex:1;min-height:0;height:0!important;overflow:auto!important}.workspace-has-assessment .schedule-legend{padding:7px!important;font-size:8px!important;flex-shrink:0}.workspace-has-assessment .task-phases{font-size:8px}.workspace-has-assessment .task-phases>div{padding:4px 10px!important;font-size:8px!important}
+.workspace-has-assessment #desk-inspector{overflow:auto!important;flex:1;min-height:0;display:block!important;padding:0!important}
+.workspace-has-assessment .inspector-identity{padding:12px!important;gap:8px}.workspace-has-assessment .inspector-identity b{font-size:13px!important}.workspace-has-assessment .inspector-identity small{font-size:10px!important}.workspace-has-assessment .vehicle-glyph{width:30px!important;height:30px!important}
+.workspace-has-assessment .inspector-position{padding:10px 13px!important;font-size:10px!important}.workspace-has-assessment .inspector-position b{font-size:12px!important}.workspace-has-assessment .inspector-metrics{padding:12px!important}.workspace-has-assessment .inspector-metrics b{font-size:23px!important}.workspace-has-assessment .inspector-metrics span{font-size:10px!important}
+.workspace-has-assessment .inspector-facts{display:block!important;padding:5px 13px!important}.workspace-has-assessment .inspector-facts>div{font-size:10px!important;padding:6px 0!important}.workspace-has-assessment .selected-mission{font-size:10px!important;margin:9px 12px!important}.workspace-has-assessment .selected-mission b{font-size:12px!important}
+.workspace-has-assessment .range-status{padding:10px 13px!important;font-size:10px!important}.workspace-has-assessment .range-status small{font-size:9px!important}.workspace-has-assessment .inspector-footnote{font-size:8px!important;padding:9px 13px!important}
+.workspace-has-assessment .spatial-panel{display:contents!important;background:transparent!important;border:0!important}
+.workspace-has-assessment .spatial-panel>header{display:none!important}
+.workspace-has-assessment .mission-map-mode{position:fixed!important;top:283px;left:337px;width:245px!important;height:34px!important;min-height:34px!important;padding:3px!important;gap:4px;display:flex;z-index:18;background:#fffffff0!important;border:1px solid #d0dfe7;border-radius:6px;pointer-events:auto}
+.workspace-has-assessment .mission-map-mode button{font-size:10px!important;padding:4px 12px!important;min-height:26px!important}.workspace-has-assessment .mission-map-mode>span{display:none}
+.workspace-has-assessment .mission-focus{position:fixed!important;left:337px;right:318px;bottom:332px;z-index:16;background:#fffffff0!important;border:1px solid #cbdde7!important;border-radius:7px!important;max-height:180px;overflow:auto;padding:10px 13px!important;pointer-events:auto}
+.workspace-has-assessment .mission-focus-heading strong{font-size:13px!important}.workspace-has-assessment .mission-endpoints b{font-size:12px!important}.workspace-has-assessment .mission-stage-list{margin:8px 0!important}.workspace-has-assessment .mission-stage-list span{font-size:10px!important}.workspace-has-assessment .mission-route-progress{font-size:10px!important}
+.workspace-has-assessment .desk-map-layers{position:fixed!important;left:337px;right:318px;bottom:301px;z-index:17;padding:5px 10px!important;height:29px!important;min-height:29px!important;display:flex!important;gap:12px;background:#fffffff0!important;border:1px solid #d0dfe7;border-radius:5px;pointer-events:auto}
+.workspace-has-assessment .desk-map-layers label{font-size:10px!important}.workspace-has-assessment .desk-map-layers button{font-size:10px!important;padding:2px 4px!important}
+.workspace-has-assessment .map-status-strip{display:none!important}
+.workspace-has-assessment .trend-panel{left:24px;right:24px;bottom:111px;height:126px!important;display:block!important}
+.workspace-has-assessment .trend-panel>header{height:30px!important;min-height:30px!important;padding:5px 12px!important}.workspace-has-assessment .trend-panel>header small{display:none}.workspace-has-assessment .chart-hint{font-size:9px!important}
+.workspace-has-assessment .trend-legend{padding:5px 12px 0!important;font-size:9px!important;gap:17px!important}.workspace-has-assessment .assessment-trend{height:75px!important;padding:0 7px 3px!important;display:block}
+.workspace-has-assessment .fleet-panel{display:none!important;right:24px;top:324px;bottom:248px;width:280px}
+.workspace-has-assessment #desk-fleet{height:calc(100% - 41px)!important;max-height:none!important;overflow:auto!important;display:block!important;padding:0!important}.workspace-has-assessment .fleet-row{padding:9px!important;font-size:10px!important;min-height:43px}.workspace-has-assessment .fleet-row b{font-size:11px!important}.workspace-has-assessment .fleet-row small{font-size:9px!important}
+.workspace-has-assessment .ops-v7-header{display:none!important;right:24px;top:324px;bottom:248px;width:280px;margin:0!important;padding:10px!important;flex-direction:column}
+.workspace-has-assessment .ops-v7-heading h3{font-size:13px!important}.workspace-has-assessment .ops-v7-heading p{font-size:9px!important}.workspace-has-assessment .ops-v7-tools{display:flex!important;flex-wrap:wrap;gap:6px}.workspace-has-assessment .ops-v7-list{height:0!important;min-height:0!important;flex:1!important;overflow:auto!important}.workspace-has-assessment .ops-v7-event-stats{font-size:9px!important}
+.workspace-show-events .ops-v7-header{display:flex!important}.workspace-show-events .inspector-panel,.workspace-show-fleet .inspector-panel{display:none!important}.workspace-show-fleet .fleet-panel{display:block!important}
+.workspace-has-assessment .ops-v7-player-top{position:fixed!important;left:24px;bottom:72px;height:29px;z-index:22;padding:3px 10px!important;background:#fffffff0!important;border:1px solid #d0dfe7;border-radius:5px;pointer-events:auto;display:flex!important;gap:12px}
+.workspace-has-assessment .ops-v7-clock-label,.workspace-has-assessment .ops-v7-hotkeys{display:none!important}.workspace-has-assessment .ops-v7-clock{font-size:10px!important}.workspace-has-assessment .ops-v7-bookmarks{display:flex;gap:4px}.workspace-has-assessment .ops-v7-bookmarks button{font-size:10px!important;min-height:23px!important;padding:3px 9px!important}
+.workspace-has-assessment .desk-player{position:fixed!important;left:24px;right:24px;bottom:23px;height:42px!important;min-height:42px!important;padding:6px 12px!important;z-index:22;display:flex!important;align-items:center;flex-wrap:nowrap!important;gap:10px;background:#fffffff5!important;border:1px solid #cbdde7;border-radius:6px;pointer-events:auto;box-shadow:0 3px 16px #264c6a0b}
+.workspace-has-assessment .desk-play{width:28px!important;height:28px!important;font-size:12px!important}.workspace-has-assessment .player-step{font-size:11px!important}.workspace-has-assessment .desk-player>.mono{font-size:11px!important;white-space:nowrap;min-width:0}.workspace-has-assessment #desk-slider{order:0!important;flex:1!important;width:auto!important;min-width:40px!important;margin:0!important}.workspace-has-assessment .speed-label{font-size:10px!important;white-space:nowrap}.workspace-has-assessment #desk-speed{font-size:11px!important;height:26px;padding:2px 4px!important}
+.workspace-has-assessment .desk-event-strip{position:fixed!important;left:24px;right:300px;bottom:2px;z-index:21;display:flex;background:#ffffffd9!important;border:0!important;padding:3px 7px!important;font-size:9px!important;height:18px;pointer-events:auto;border-radius:3px}
+.workspace-has-assessment .desk-methodology{display:none!important}.workspace-has-assessment .desk-notice{position:fixed;left:337px;bottom:337px;z-index:18;max-width:400px;font-size:10px;pointer-events:auto}
+.workspace-has-assessment .desk-data-note{position:fixed;left:337px;right:318px;top:329px;z-index:18;pointer-events:auto;border:1px solid #cbdde7;border-radius:6px;padding:8px 10px;font-size:10px;background:#fffffff0}
+.workspace-has-assessment .desk-data-note button{font-size:10px!important}
+.workspace-has-assessment .workspace-tools{left:auto;right:24px;top:283px;bottom:auto;width:280px;justify-content:space-between}
+.workspace-has-assessment .workspace-tools button{font-size:10px;padding:8px 9px}.workspace-has-assessment [data-workspace-tool=wide]{display:none}
+.workspace-has-assessment .map-stage .geo-map-options{top:283px;left:592px;right:318px;min-height:34px;max-width:none;padding:4px 9px;gap:7px}
+.workspace-has-assessment .map-stage .geo-map-options label{font-size:0}.workspace-has-assessment .map-stage .geo-map-options select{max-width:130px;font-size:10px}
+.workspace-has-assessment .map-stage .geo-route-legend{left:337px;right:318px;bottom:248px;max-height:45px;padding:3px 5px}
+.workspace-has-assessment .map-stage .geo-controls{right:318px;top:338px}.workspace-has-assessment .map-stage .geo-city-label{display:none}
+.workspace-has-assessment .geo-basemap-switch{top:72px;right:45%;display:none}
+.workspace-has-assessment .map-stage .geo-basemap-switch{display:flex;top:71px;right:27px}
+.workspace-has-assessment .run-setup{position:fixed;left:24px;top:280px;width:298px;z-index:25;background:#fffffff5;border:1px solid #cbdde7;border-radius:5px;padding:6px 10px;pointer-events:auto}
+.workspace-has-assessment .run-setup summary{font-size:11px}.workspace-has-assessment .run-setup[open]{width:420px;max-height:60vh;overflow:auto;box-shadow:0 5px 20px #173b5c22}
+body[data-workspace=simulation][data-workspace-view=control] .schedule-panel{top:323px}
+.map-panels-hidden :is(.workspace-business>.card,.workspace-business>.metrics,.workspace-business>.workspace-layout,.workspace-business>.scenario-layout,.workspace-business>.analytics-grid,.schedule-panel,.inspector-panel,.fleet-panel,.ops-v7-header,.trend-panel,.desk-kpis,.desk-map-layers,.geo-route-legend,.mission-focus,.desk-data-note,.run-setup){display:none!important}
+.map-panels-hidden:not(.workspace-has-assessment) .workspace-business{display:none!important}
+.map-panels-hidden .map-stage .geo-map-options{left:24px;top:151px;right:auto;width:360px}.map-panels-hidden .mission-map-mode{top:209px;left:24px}.map-panels-hidden .map-stage .geo-controls{right:24px;top:209px}
+.map-workspace .modal-root{z-index:3000!important}.map-workspace .toast,.map-workspace #toasts{z-index:4000!important}
+
+/* The primary directory is a single floating entry surface over China. */
+.map-workspace .portal-mode .workspace-business{display:block;left:32px;top:32px;bottom:32px;width:465px;padding:28px;background:#fffffff0;border:1px solid #c9dce4;border-radius:12px;box-shadow:0 10px 40px #20475d16;backdrop-filter:blur(12px);overflow:auto}
+.map-workspace .portal-landing{position:static!important;display:block!important;background:transparent!important;min-height:0!important;padding:0!important;overflow:visible!important}
+.map-workspace .landing-inner{display:block!important;max-width:none!important;width:100%!important;margin:0!important;padding:0!important}
+.map-workspace .landing-masthead{padding:0 0 20px!important;border-bottom:1px solid #d9e6eb!important}.map-workspace .landing-brand b{color:#173f5b!important;font-size:23px!important}.map-workspace .landing-brand small{color:#5a7e92!important;font-size:10px!important}.map-workspace .landing-indicator{display:none!important}
+.map-workspace .landing-hero{display:block!important;padding:0!important}.map-workspace .landing-instrument{display:none!important}.map-workspace .landing-intro{padding:28px 0 22px!important}.map-workspace .landing-intro:before{display:none!important}.map-workspace .landing-intro h1{color:#1c4560!important;font-size:33px!important;line-height:1.25!important;margin:0 0 13px!important;letter-spacing:0!important}.map-workspace .landing-intro h1 span{color:#326d88!important;font-size:inherit!important}.map-workspace .landing-intro p{font-size:12px!important;color:#6a8798!important;margin:0!important}.map-workspace .landing-intro .overline{display:none!important}
+.map-workspace .landing-capabilities{gap:7px;margin-top:13px}.map-workspace .landing-capabilities span{font-size:9px!important;color:#7291a2!important;border-color:#cedee6!important}
+.map-workspace .landing-modules{display:block!important}.map-workspace .landing-module{display:grid!important;grid-template-columns:32px minmax(0,1fr) 24px!important;min-height:73px!important;height:auto!important;padding:13px 0!important;gap:12px!important;background:transparent!important;border:0!important;border-bottom:1px solid #dbe6eb!important;box-shadow:none!important;text-align:left!important}
+.map-workspace .landing-module-icon,.map-workspace .landing-module-desc{display:none!important}.map-workspace .landing-module-info strong{font-size:19px!important;color:#244b64!important}.map-workspace .landing-module-info small{font-size:9px!important;color:#76919f!important}.map-workspace .landing-number{font-size:10px!important;color:#7695a6!important}.map-workspace .landing-module-arrow{font-size:20px!important;color:#46809c!important}
+.map-workspace .landing-section-head{display:flex!important;justify-content:space-between;width:100%!important;padding:4px 0 10px!important;margin:0!important;font-size:10px!important;color:#527b93!important}.map-workspace .landing-section-head b{font-size:8px!important}.map-workspace .landing-footer{font-size:8px!important;padding:15px 0 0!important;margin:0!important;border:0!important;display:flex;justify-content:space-between;color:#77909f!important}
+.map-stage-home :is(.geo-controls,.geo-city-label,.geo-scale,.geo-route-legend,.geo-map-options,.geo-basemap-switch,.geo-tile-state){display:none!important}.map-stage-home .geo-map{pointer-events:none}.map-stage-home .geo-attribution{right:24px;bottom:12px}
+/* Reset earlier console grid constraints before applying the responsive canvas. */
+.workspace-has-assessment #desk-content>:is(.desk-empty,.desk-loading){position:fixed;left:24px;top:283px;width:360px;max-height:55vh;overflow:auto;padding:25px;background:#fffffff2;border:1px solid #cbdde7;border-radius:8px;z-index:20;pointer-events:auto}
+.workspace-business :is(.layout-2-1,.mission-deployment,.condition-layout,.reports-layout){display:block!important}
+.map-workspace .shell.portal-mode .portal-landing{background:transparent!important}
+.map-workspace .shell.portal-mode .landing-inner{min-height:0!important}
+.map-workspace .shell.portal-mode .workspace-business{backdrop-filter:none}
+.map-workspace .shell.portal-mode .landing-module{background:transparent!important;border:0!important;border-bottom:1px solid #dbe6eb!important;padding:14px 0!important;align-items:center;min-height:76px!important}
+.map-workspace .shell.portal-mode .landing-module:hover{background:#eaf3f7!important}
+.map-workspace .landing-number{white-space:nowrap;width:auto!important}
+.workspace-has-assessment .map-stage .geo-basemap-switch{left:337px;right:auto;top:338px}
+.workspace-has-assessment .inspector-panel{overflow:auto!important;scrollbar-width:thin}
+.workspace-has-assessment .inspector-panel>header{position:sticky;top:0;z-index:2}
+.workspace-has-assessment .inspector-panel #desk-inspector{overflow:visible!important;flex:0 0 auto}
+.workspace-has-assessment .inspector-panel .mission-focus{position:static!important;inset:auto!important;border:0!important;border-bottom:1px solid #d0dfe7!important;border-radius:0!important;max-height:none!important;flex:0 0 auto;padding:11px!important}
+.workspace-has-assessment .inspector-panel .mission-focus:empty{display:none}
+.workspace-has-assessment .inspector-panel .mission-endpoints{flex-direction:column;align-items:stretch;margin:10px 0;gap:7px}
+.workspace-has-assessment .inspector-panel .mission-endpoints small{font-size:10px}
+.workspace-has-assessment .inspector-panel .mission-endpoints b{font-size:11px!important}
+.workspace-has-assessment .inspector-panel .mission-direction{display:none}
+.workspace-has-assessment .inspector-panel .mission-stage-list{display:grid!important;grid-template-columns:1fr 1fr;gap:7px;margin:9px 0!important}
+.workspace-has-assessment .inspector-panel .mission-stage-list li{font-size:10px}
+.workspace-has-assessment .inspector-panel .mission-stage-list li:after{display:none}
+.workspace-has-assessment .inspector-panel .mission-focus-platform{font-size:10px}
+.workspace-has-assessment .inspector-panel .mission-phase-badge{font-size:10px;padding:4px 6px}
+.workspace-has-assessment .inspector-panel .mission-route-progress{font-size:10px}
+.map-workspace .workspace-mode :is(.rail,.topbar){backdrop-filter:none!important}
+.workspace-business>.page-heading{pointer-events:auto}
+.workspace-business .header-filter select{min-height:31px!important;height:31px!important}
+.map-workspace .workspace-mode .rail{flex-direction:row!important;gap:20px!important}
+.map-workspace .workspace-mode .brand{height:64px!important;flex-shrink:0;flex-grow:0}
+.map-workspace .workspace-mode #nav{height:100%;align-self:center!important}
+.workspace-has-assessment .inspector-panel{width:280px!important;max-height:none!important;margin:0!important;align-self:auto!important;justify-self:auto!important}
+.workspace-has-assessment .desk-kpis{gap:0!important}
+.workspace-has-assessment .desk-kpis>div{display:flex!important;flex-direction:column;gap:2px!important}
+.workspace-has-assessment .desk-kpis>div:first-child b{font-size:22px!important}
+.workspace-has-assessment .desk-kpis>div>small{font-size:8px!important;line-height:1.3!important}
+.workspace-has-assessment .schedule-tools input,.workspace-has-assessment .schedule-tools select{min-height:30px!important}
+.workspace-has-assessment .schedule-ruler{min-height:30px!important}
+.workspace-has-assessment .schedule-label{padding:3px 0!important}
+.workspace-has-assessment .desk-actions select{height:30px!important;min-width:180px}
+.workspace-has-assessment .desk-actions .icon-button{width:30px;height:30px}
+.workspace-has-assessment .geo-map .geo-controls button{min-height:36px}
+@media(max-width:1150px) and (min-width:760px){
+ .workspace-has-assessment .map-stage .geo-basemap-switch{left:314px;top:338px}
+ .workspace-show-inspector.workspace-has-assessment .inspector-panel{display:flex!important;z-index:30}
+ .map-workspace .workspace-mode .brand{flex-basis:175px;width:175px!important}.map-workspace .workspace-mode .brand-words strong{font-size:16px!important}.map-workspace .workspace-mode .brand-words small{font-size:8px!important}.map-workspace .workspace-mode .brand-mark{width:35px!important;min-width:35px!important;height:35px!important}
+ .map-workspace .workspace-mode .rail-link{min-width:77px;padding:7px 8px!important}.map-workspace .workspace-mode .rail-link-text{font-size:11px!important}
+ .workspace-business{width:360px}.workspace-business>.page-heading{right:315px}.map-workspace .workspace-mode .topbar{width:280px!important}.map-workspace .topbar .home-link{font-size:9px!important}
+ .map-stage .geo-map-options,.map-stage .geo-route-legend{left:410px}.workspace-has-assessment .schedule-panel{width:275px}.workspace-has-assessment .inspector-panel{display:none!important}.workspace-has-assessment .workspace-tools{width:230px}.workspace-has-assessment .mission-map-mode{left:314px;width:220px!important}.workspace-has-assessment .map-stage .geo-map-options{left:544px;right:24px}.workspace-has-assessment .map-stage .geo-route-legend,.workspace-has-assessment .desk-map-layers,.workspace-has-assessment .mission-focus,.workspace-has-assessment .desk-data-note{left:314px;right:24px}.workspace-has-assessment .map-stage .geo-controls{right:24px}
+}
+@media(max-width:759px){
+ .workspace-has-assessment #desk-content>:is(.desk-empty,.desk-loading){left:12px;right:52px;top:259px;width:auto;max-height:40vh}
+ .workspace-has-assessment .map-stage .geo-basemap-switch{left:auto!important}
+ .map-workspace .workspace-mode .rail{top:10px!important;left:12px!important;right:12px!important;height:54px!important;min-height:54px!important;padding:0 12px!important}.map-workspace .workspace-mode .brand{width:auto!important;flex:1;min-height:50px!important}.map-workspace .workspace-mode #nav{display:none!important}.map-workspace .workspace-mode .brand-words strong{font-size:18px!important}.map-workspace .workspace-mode .brand-words small{font-size:9px!important}.map-workspace .workspace-mode .brand-mark{width:35px!important;height:35px!important;min-width:35px!important}
+ .map-workspace .workspace-mode .topbar{left:12px!important;right:12px!important;top:73px!important;width:auto!important;height:38px!important;min-height:38px!important;padding:0 10px!important}.map-workspace .topbar .home-link{font-size:10px!important}.map-workspace .topbar .city-header{font-size:0!important}
+ .workspace-business>.page-heading{top:120px!important;left:12px;right:12px;height:39px;min-height:39px;padding:6px 9px!important;gap:8px}.workspace-business>.page-heading h1{font-size:17px!important}.workspace-business .header-filter>span{display:none}.workspace-business .header-filter select{height:26px;max-width:205px;font-size:10px!important}
+ .workspace-business{top:auto;left:12px;right:12px;bottom:60px;width:auto;max-height:43dvh;border-radius:8px;padding-bottom:43px}.workspace-business .metrics{gap:6px!important}.workspace-business .metric{min-height:90px!important;padding:10px!important}.workspace-business .metric-value{font-size:22px!important}
+ .workspace-business .subnav{display:flex!important;position:sticky;top:0;z-index:15;background:#fffffff5!important;overflow:auto;white-space:nowrap;border:1px solid #d0dfe7;border-radius:6px;padding:4px!important;margin:0 0 7px!important;flex-shrink:0}.workspace-business .subnav-button{font-size:10px!important;padding:7px 9px!important;min-height:29px!important}.workspace-business .subnav-index{display:none!important}
+ .map-stage .geo-map-options{left:12px!important;right:12px!important;top:169px!important;min-height:32px;max-width:none;gap:4px;padding:3px 8px}.map-stage .geo-map-options #geo-map-summary{font-size:9px}.map-stage .geo-map-options b{font-size:11px}.map-stage .geo-map-options label{font-size:0}.map-stage .geo-map-options select{font-size:10px;max-width:125px;height:25px;min-height:25px}
+ .map-stage .geo-controls{top:247px!important;right:12px!important}.map-stage .geo-controls button{width:32px;height:31px;font-size:19px}.map-stage .geo-city-label{display:none}.geo-basemap-switch{top:209px;right:12px}.geo-basemap-switch button{font-size:10px;padding:6px 9px}.map-stage .geo-route-legend{left:12px!important;right:52px!important;bottom:calc(43dvh + 69px)!important;max-height:47px;padding:2px 4px}.map-stage .geo-route-legend button{font-size:9px;padding:2px 4px;min-height:20px}.map-stage .geo-route-legend button small{display:none}
+ .workspace-tools{left:20px;bottom:17px;right:auto}.workspace-tools button{font-size:10px;padding:7px 9px}
+ .workspace-has-assessment .assessment-toolbar{left:12px;right:12px;top:169px;height:37px!important;min-height:37px!important;padding:4px 8px!important}.workspace-has-assessment .desk-title{display:none!important}.workspace-has-assessment .desk-actions{width:100%;gap:5px;margin:0}.workspace-has-assessment .desk-actions label{flex:1;font-size:0!important}.workspace-has-assessment .desk-actions select{max-width:none!important;width:100%;height:27px;font-size:10px!important}.workspace-has-assessment .desk-actions .button{font-size:0!important;padding:5px!important;min-width:26px}.workspace-has-assessment .desk-actions .button svg{width:14px}.workspace-has-assessment [data-desk=fullscreen]{display:none!important}
+ .workspace-has-assessment .desk-kpis{display:none!important}.workspace-has-assessment .map-stage .geo-map-options{top:214px!important}.workspace-has-assessment .mission-map-mode{top:253px!important;left:12px!important;width:216px!important;height:30px!important;min-height:30px!important}.workspace-has-assessment .mission-map-mode button{font-size:10px!important;padding:3px 12px!important;min-height:23px!important}
+ .workspace-has-assessment .desk-map-layers{display:none!important}.workspace-has-assessment .geo-basemap-switch{top:253px!important;right:12px!important}.workspace-has-assessment .map-stage .geo-controls{top:291px!important}.workspace-has-assessment .map-stage .geo-route-legend{bottom:calc(32dvh + 105px)!important;max-height:45px}
+ .workspace-has-assessment :is(.schedule-panel,.inspector-panel,.trend-panel,.fleet-panel,.ops-v7-header){display:none!important;left:12px!important;right:12px!important;top:auto!important;bottom:102px!important;width:auto!important;height:32dvh!important;max-height:300px!important;min-height:180px!important}
+ body[data-mobile-pane=schedule] .schedule-panel{display:flex!important}body[data-mobile-pane=inspector] .inspector-panel{display:flex!important}body[data-mobile-pane=trend] .trend-panel{display:block!important}body[data-mobile-pane=events] .ops-v7-header{display:flex!important}body[data-mobile-pane=fleet] .fleet-panel{display:block!important}
+ .workspace-has-assessment .schedule-ruler,.workspace-has-assessment .schedule-row{grid-template-columns:105px 1fr!important}.workspace-has-assessment .schedule-row{min-height:40px!important}.workspace-has-assessment .inspector-facts{display:grid!important;grid-template-columns:1fr 1fr}.workspace-has-assessment .inspector-position{display:none}.workspace-has-assessment .selected-mission,.workspace-has-assessment .inspector-footnote{display:none!important}.workspace-has-assessment .range-status{padding:4px 12px!important}.workspace-has-assessment .inspector-metrics{padding:7px 12px!important}.workspace-has-assessment .trend-legend{font-size:8px!important;gap:10px!important}.workspace-has-assessment .assessment-trend{height:calc(32dvh - 90px)!important;max-height:185px}
+ .workspace-has-assessment .mission-focus,.workspace-has-assessment .desk-data-note{left:12px;right:52px;top:291px;bottom:auto;max-height:145px;padding:7px!important;font-size:9px}.workspace-has-assessment .mission-focus-heading{font-size:10px}.workspace-has-assessment .mission-stage-list{display:none}.workspace-has-assessment .mission-endpoints{gap:6px;font-size:10px}.workspace-has-assessment .mission-endpoints b{font-size:10px!important}
+ .workspace-has-assessment .desk-player{left:12px;right:12px;bottom:17px;height:38px!important;min-height:38px!important;padding:5px 8px!important;gap:5px}.workspace-has-assessment #desk-time-end{display:none}.workspace-has-assessment .desk-player>.mono{font-size:10px!important}.workspace-has-assessment .desk-play{width:24px!important;height:24px!important}.workspace-has-assessment .speed-label{font-size:0!important;margin:0}.workspace-has-assessment #desk-speed{font-size:10px!important;max-width:42px}.workspace-has-assessment .desk-player [data-desk=reset]{display:none}.workspace-has-assessment .desk-event-strip{left:12px;right:140px;bottom:0;height:15px;font-size:8px!important}.workspace-has-assessment #desk-connection{display:none}.workspace-has-assessment .ops-v7-player-top{display:none!important}
+ .workspace-has-assessment .workspace-tools{left:12px;right:auto;top:auto;bottom:calc(32dvh + 110px);width:auto}.workspace-has-assessment .workspace-tools button{display:none}.workspace-has-assessment .workspace-tools [data-workspace-tool=panels]{display:block;font-size:9px;padding:5px 7px}
+ .workspace-has-assessment .workspace-mobile-tabs{position:fixed;left:12px;right:12px;bottom:65px;display:flex;gap:5px;z-index:40;pointer-events:auto}.workspace-mobile-tabs button{flex:1;font-size:10px;padding:6px 4px}
+ .workspace-has-assessment .run-setup{left:12px;top:286px;width:215px;z-index:25}.workspace-has-assessment .run-setup[open]{width:calc(100vw - 24px);max-height:45vh}
+ .map-workspace .portal-mode .workspace-business{left:14px;right:14px;top:18px;bottom:18px;max-height:none;width:auto;padding:20px;background:#ffffffeb}.map-workspace .landing-masthead{padding-bottom:13px!important}.map-workspace .landing-intro{padding:22px 0 16px!important}.map-workspace .landing-intro h1{font-size:29px!important}.map-workspace .landing-module{min-height:64px!important;padding:10px 0!important}.map-workspace .landing-module-info strong{font-size:18px!important}.map-workspace .landing-brand b{font-size:22px!important}.map-workspace .landing-brand small{font-size:9px!important}
+ .map-panels-hidden.workspace-has-assessment :is(.schedule-panel,.inspector-panel,.trend-panel,.fleet-panel,.ops-v7-header,.workspace-mobile-tabs,.geo-route-legend,.mission-focus){display:none!important}.map-panels-hidden .workspace-tools{bottom:68px!important}.map-panels-hidden .map-stage .geo-map-options{top:214px!important}.map-panels-hidden:not(.workspace-has-assessment) .map-stage .geo-map-options{top:169px!important}
+}
+@media(max-width:759px){
+ .map-workspace .shell.portal-mode .workspace-business{top:auto!important;bottom:26px;max-height:55dvh!important;height:55dvh;padding:17px}
+ .map-workspace .shell.portal-mode .landing-intro{padding:12px 0!important}
+ .map-workspace .shell.portal-mode .landing-intro h1{font-size:21px!important;margin:0!important}
+ .map-workspace .shell.portal-mode .landing-intro br{display:none}
+ .map-workspace .shell.portal-mode .landing-intro :is(p,.landing-capabilities){display:none}
+ .map-workspace .shell.portal-mode .landing-module{min-height:57px!important;padding:9px 0!important}
+ .map-workspace .shell.portal-mode .landing-module-info strong{font-size:17px!important}
+ .map-workspace .shell.portal-mode .landing-footer{display:none!important}
+}
+@media(max-width:759px){
+ .workspace-has-assessment .desk-actions{flex-wrap:nowrap!important}
+ .workspace-has-assessment .assessment .assessment-toolbar{flex-direction:row!important;flex-wrap:nowrap!important}
+ .workspace-has-assessment .assessment .desk-actions{display:flex!important}
+ .workspace-has-assessment .assessment .desk-actions label{gap:0!important;height:27px!important;grid-column:auto!important}
+ .workspace-has-assessment .assessment .desk-actions select{min-height:27px!important;height:27px!important;padding:3px 6px!important}
+ .workspace-has-assessment .desk-actions label{min-width:0}
+ .workspace-has-assessment .desk-actions select{min-width:0!important;height:27px!important}
+ .workspace-has-assessment .desk-actions .button{width:30px!important;height:27px!important;min-height:27px!important;flex-shrink:0}
+ .workspace-has-assessment .map-stage .geo-route-legend{display:none!important}
+ body[data-mobile-pane=map].workspace-has-assessment .workspace-tools{bottom:110px}
+ .workspace-has-assessment .workspace-mobile-tabs button{font-size:10px;padding:6px 1px}
+}
+@media(min-width:760px) and (max-height:850px){
+ .map-workspace .workspace-mode .rail{top:10px!important;height:58px!important;min-height:58px!important}
+ .map-workspace .workspace-mode .brand{height:56px!important;min-height:56px!important}
+ .workspace-business>.page-heading,.map-workspace .workspace-mode .topbar{top:80px!important;height:40px!important;min-height:40px!important}
+ .workspace-business{top:140px}
+ .workspace-has-assessment .assessment-toolbar{top:128px;height:40px!important;min-height:40px!important;padding:4px 12px!important}
+ .workspace-has-assessment .desk-kpis{top:176px;height:52px;padding:4px 0!important}
+ .workspace-has-assessment .desk-kpis>div>small{display:none!important}
+ .workspace-has-assessment .schedule-panel{top:244px;bottom:204px}
+ .workspace-has-assessment .inspector-panel,.workspace-has-assessment .fleet-panel,.workspace-has-assessment .ops-v7-header{top:285px;bottom:204px}
+ .workspace-has-assessment .workspace-tools,.workspace-has-assessment .mission-map-mode,.workspace-has-assessment .map-stage .geo-map-options{top:244px}
+ .workspace-has-assessment .map-stage .geo-controls,.workspace-has-assessment .map-stage .geo-basemap-switch{top:291px}
+ .workspace-has-assessment .desk-map-layers{bottom:245px}
+ .workspace-has-assessment .map-stage .geo-route-legend{bottom:204px}
+ .workspace-has-assessment .trend-panel{bottom:81px;height:112px!important}
+ .workspace-has-assessment .assessment-trend{height:62px!important}
+ .workspace-has-assessment .ops-v7-player-top{display:none!important}
+ .workspace-has-assessment .run-setup{top:241px}
+ body.workspace-has-assessment[data-workspace=simulation][data-workspace-view=control] .schedule-panel{top:282px}
+ .workspace-has-assessment .desk-data-note{top:291px}
+}
+@media(min-width:760px){
+ .map-immersive .workspace-mode :is(.rail,.topbar),.map-immersive .workspace-business>.page-heading{display:none!important}
+ .map-immersive.workspace-has-assessment .assessment-toolbar{top:16px}
+ .map-immersive.workspace-has-assessment .desk-kpis{top:74px}
+ .map-immersive.workspace-has-assessment .schedule-panel{top:147px}
+ .map-immersive.workspace-has-assessment .inspector-panel,.map-immersive.workspace-has-assessment .fleet-panel,.map-immersive.workspace-has-assessment .ops-v7-header{top:188px}
+ .map-immersive.workspace-has-assessment .workspace-tools,.map-immersive.workspace-has-assessment .mission-map-mode,.map-immersive.workspace-has-assessment .map-stage .geo-map-options{top:147px}
+ .map-immersive.workspace-has-assessment .map-stage .geo-controls,.map-immersive.workspace-has-assessment .map-stage .geo-basemap-switch{top:202px}
+ .map-immersive.workspace-has-assessment .run-setup{top:144px}
+ body.map-immersive.workspace-has-assessment[data-workspace=simulation][data-workspace-view=control] .schedule-panel{top:185px}
+}
+/* Tablet uses one optional bottom surface, leaving a useful geographic view. */
+@media(min-width:760px) and (max-width:1150px){
+ .workspace-has-assessment :is(.schedule-panel,.inspector-panel,.fleet-panel,.ops-v7-header,.trend-panel){display:none!important;left:24px!important;right:24px!important;top:auto!important;bottom:102px!important;width:auto!important;height:35dvh!important;max-height:none!important}
+ body.workspace-has-assessment[data-mobile-pane=schedule] .schedule-panel{display:flex!important}
+ body.workspace-has-assessment[data-mobile-pane=inspector] .inspector-panel{display:flex!important}
+ body.workspace-has-assessment[data-mobile-pane=fleet] .fleet-panel{display:block!important}
+ body.workspace-has-assessment[data-mobile-pane=events] .ops-v7-header{display:flex!important}
+ body.workspace-has-assessment[data-mobile-pane=trend] .trend-panel{display:block!important}
+ .workspace-has-assessment .workspace-mobile-tabs{position:fixed;left:24px;right:24px;bottom:65px;display:flex;gap:7px;z-index:40;pointer-events:auto}
+ .workspace-has-assessment .workspace-mobile-tabs button{flex:1}
+ .workspace-has-assessment .mission-map-mode{left:24px!important;width:190px!important}
+ .workspace-has-assessment .map-stage .geo-map-options{left:234px!important;right:270px!important}
+ .workspace-has-assessment .map-stage .geo-basemap-switch{left:24px!important;top:338px}
+ .workspace-has-assessment :is(.geo-route-legend,.desk-map-layers,.ops-v7-player-top){display:none!important}
+ .workspace-has-assessment .assessment-trend{height:calc(35dvh - 90px)!important}
+ .map-panels-hidden.workspace-has-assessment :is(.schedule-panel,.inspector-panel,.fleet-panel,.ops-v7-header,.trend-panel,.workspace-mobile-tabs){display:none!important}
+ .workspace-has-assessment .run-setup{top:330px;left:24px;width:220px}
+ .workspace-has-assessment .run-setup[open]{width:420px}
+ .workspace-has-assessment .desk-data-note{left:24px;right:80px;top:333px}
+ .map-immersive.workspace-has-assessment .map-stage .geo-basemap-switch{top:202px}
+}
+@media print{.map-stage{position:fixed;opacity:.25}.workspace-tools,.workspace-mobile-tabs{display:none}.map-workspace .workspace-business{position:relative;width:100%;overflow:visible;max-height:none}.workspace-has-assessment :is(.schedule-panel,.inspector-panel,.trend-panel){position:relative!important;inset:auto!important;width:100%!important;height:auto!important;display:block!important;margin:10px 0}}

@@ -1,11 +1,12 @@
 """Aether Route API — versioned, authenticated and entirely self-hosted."""
 from __future__ import annotations
 import json
+from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Depends, HTTPException, Query, Request
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, func
@@ -16,7 +17,7 @@ from . import models as m, schemas as s, engine as sim
 from .security import current_user, can_edit, can_admin, verify_password, sign_token
 from .seed import seed_database
 from .config import DEMO_MODE, CORS_ORIGINS
-from .cities import CITIES
+from .cities import CITIES, REGIONAL_CITY
 from .replay import assessment_projection
 from .migration import upgrade_schema
 from .operations import normalize_configuration, scenario_vehicles, telemetry_at, delivery_report
@@ -53,12 +54,17 @@ def rows(db: Session, model) -> list[dict]:
             for row in db.scalars(select(model)).all()]
 
 
-def graph_and_fleet(db: Session, city_id: str | None = None):
+def graph_and_fleet(db: Session, city_id: str | None = None, network_id: str | None = None):
     nodes = rows(db,m.Node)
     edges = rows(db,m.Edge)
     vehicles = rows(db,m.Vehicle)
     if city_id:
         nodes = [n for n in nodes if n['city_id'] == city_id]
+        if network_id is None:
+            network_id='regional' if any(n['network_id']=='regional' for n in nodes) else 'geographic' if any(n['network_id']=='geographic' for n in nodes) else 'baseline'
+    if network_id is not None:
+        nodes = [n for n in nodes if n['network_id']==network_id]
+    if city_id or network_id is not None:
         ids = {n['id'] for n in nodes}
         edges = [e for e in edges if e['source'] in ids and e['target'] in ids]
         vehicles = [v for v in vehicles if v['home_node'] in ids]
@@ -66,6 +72,7 @@ def graph_and_fleet(db: Session, city_id: str | None = None):
 
 
 def ensure_in_city(city_id:str,lat:float,lon:float):
+    if city_id=='national':return
     city=next((c for c in CITIES if c['id']==city_id),None)
     if not city:raise HTTPException(status_code=422,detail='不支持的城市编号')
     clat,clon=city['center']
@@ -73,15 +80,17 @@ def ensure_in_city(city_id:str,lat:float,lon:float):
         raise HTTPException(status_code=422,detail='示例设施位置距离目标城市过远，请核对经纬度')
 
 
-def same_city_nodes(db: Session, city_id: str, *node_ids: str):
+def same_city_nodes(db: Session, city_id: str, *node_ids: str, network_id: str | None = None):
     for node_id in node_ids:
         node = lookup(db,m.Node,node_id)
         if node.city_id != city_id:
             raise HTTPException(status_code=422,detail='节点不属于当前城市，禁止跨城市混合规划')
+        if network_id is not None and node.network_id != network_id:
+            raise HTTPException(status_code=422,detail='节点不属于当前想定的路网，不能混合历史拓扑与地理路网')
 
 @app.get(f'{PREFIX}/cities')
 def cities(_user:m.User=Depends(current_user)):
-    return CITIES
+    return [REGIONAL_CITY]+CITIES
 
 
 def note(db:Session, user:m.User, action:str, subject:str, details:dict|None=None):
@@ -121,9 +130,9 @@ def overview(city_id:str|None=None,db:Session=Depends(get_db), _user:m.User=Depe
             'latest_run':s.RunOut.model_validate(last_run).model_dump(mode='json') if last_run else None}
 
 @app.get(f'{PREFIX}/network')
-def network(city_id:str|None=None,db:Session=Depends(get_db), _user:m.User=Depends(current_user)):
-    nodes,edges,vehicles = graph_and_fleet(db,city_id)
-    return {'nodes':nodes,'edges':edges,'vehicles':vehicles}
+def network(city_id:str|None=None,network_id:str|None=None,db:Session=Depends(get_db), _user:m.User=Depends(current_user)):
+    nodes,edges,vehicles = graph_and_fleet(db,city_id,network_id)
+    return {'nodes':nodes,'edges':edges,'vehicles':vehicles,'network_id':nodes[0]['network_id'] if nodes else network_id or 'baseline'}
 
 @app.post(f'{PREFIX}/network/nodes',response_model=s.NodeOut,status_code=201)
 def create_node(body:s.NodeIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
@@ -152,6 +161,7 @@ def update_node(node_id:str,body:s.NodePatch,db:Session=Depends(get_db),user:m.U
 def create_edge(body:s.EdgeIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     a=lookup(db,m.Node,body.source);b=lookup(db,m.Node,body.target)
     if a.city_id!=b.city_id:raise HTTPException(status_code=422,detail='禁止跨城市创建路网通道')
+    if a.network_id!=b.network_id:raise HTTPException(status_code=422,detail='禁止连接不同路网的节点')
     # Prevent ambiguous parallel edges in the bidirectional model.
     existing=db.scalar(select(m.Edge.id).where(
         ((m.Edge.source==body.source)&(m.Edge.target==body.target)) |
@@ -197,13 +207,13 @@ def update_scenario(scenario_id:str,body:s.ScenarioPatch,db:Session=Depends(get_
 @app.get(f'{PREFIX}/scenarios/{{scenario_id}}/configuration')
 def get_configuration(scenario_id:str,db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
     scenario=lookup(db,m.Scenario,scenario_id)
-    _,_,vehicles=graph_and_fleet(db,scenario.city_id)
+    _,_,vehicles=graph_and_fleet(db,scenario.city_id,scenario.network_id)
     return normalize_configuration(scenario.configuration_data,vehicles)
 
 @app.patch(f'{PREFIX}/scenarios/{{scenario_id}}/configuration')
 def set_configuration(scenario_id:str,body:s.ConfigurationPatch,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     scenario=lookup(db,m.Scenario,scenario_id)
-    _,_,vehicles=graph_and_fleet(db,scenario.city_id)
+    _,_,vehicles=graph_and_fleet(db,scenario.city_id,scenario.network_id)
     current=normalize_configuration(scenario.configuration_data,vehicles)
     patch=body.model_dump(exclude_unset=True,exclude_none=True)
     if not patch:raise HTTPException(status_code=422,detail='没有提供想定配置参数')
@@ -215,7 +225,7 @@ def set_configuration(scenario_id:str,body:s.ConfigurationPatch,db:Session=Depen
         if not set(identifiers).issubset(known):
             raise HTTPException(status_code=422,detail='编组存在不属于当前城市的平台')
         for unit in patch['units']:
-            same_city_nodes(db,scenario.city_id,unit['deploy_node'])
+            same_city_nodes(db,scenario.city_id,unit['deploy_node'],network_id=scenario.network_id)
     updated={**current,**patch}
     scenario.configuration_data=updated
     note(db,user,'scenario.configuration.update',scenario.id,patch)
@@ -239,7 +249,17 @@ def tasks(scenario_id:str,db:Session=Depends(get_db),_user:m.User=Depends(curren
 def create_task(scenario_id:str,body:s.TaskIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     lookup(db,m.Scenario,scenario_id)
     scenario=lookup(db,m.Scenario,scenario_id)
-    same_city_nodes(db,scenario.city_id,body.origin,body.destination)
+    same_city_nodes(db,scenario.city_id,body.origin,body.destination,network_id=scenario.network_id)
+    if body.leg_index>1 and not body.predecessor_task_id:
+        raise HTTPException(status_code=422,detail='后续运输分段必须关联前序任务')
+    if body.shipment_id and db.scalar(select(m.DeliveryTask).where(m.DeliveryTask.scenario_id==scenario_id,m.DeliveryTask.shipment_id==body.shipment_id,m.DeliveryTask.leg_index==body.leg_index)):
+        raise HTTPException(status_code=409,detail='同一运单中分段序号不能重复')
+    if body.predecessor_task_id:
+        previous=lookup(db,m.DeliveryTask,body.predecessor_task_id)
+        if previous.scenario_id!=scenario_id or previous.destination!=body.origin or previous.shipment_id!=body.shipment_id or not body.shipment_id:
+            raise HTTPException(status_code=422,detail='接驳任务必须来自同一运单和想定，并衔接前段终点')
+        if body.leg_index!=previous.leg_index+1 or abs(body.weight_kg-previous.weight_kg)>.001 or body.cargo!=previous.cargo:
+            raise HTTPException(status_code=422,detail='运单分段序号必须连续，接驳物资及重量必须一致')
     count = db.scalar(select(func.count()).select_from(m.DeliveryTask).where(m.DeliveryTask.scenario_id==scenario_id)) or 0
     task=m.DeliveryTask(id='TSK-'+uuid4().hex[:10].upper(),scenario_id=scenario_id,
                         code=f'T-{count+1:03}', **body.model_dump())
@@ -252,6 +272,11 @@ def update_task(scenario_id:str,task_id:str,body:s.TaskPatch,db:Session=Depends(
     if task.scenario_id!=scenario_id:raise HTTPException(status_code=404,detail='任务不属于当前想定')
     changes=body.model_dump(exclude_unset=True,exclude_none=True)
     for key,value in changes.items():setattr(task,key,value)
+    if task.shipment_id:
+        siblings=db.scalars(select(m.DeliveryTask).where(m.DeliveryTask.scenario_id==scenario_id,m.DeliveryTask.shipment_id==task.shipment_id)).all()
+        for sibling in siblings:
+            for key in ('cargo','weight_kg'):
+                if key in changes:setattr(sibling,key,changes[key])
     note(db,user,'task.update',task.id,changes);db.commit();db.refresh(task)
     return task
 
@@ -259,6 +284,8 @@ def update_task(scenario_id:str,task_id:str,body:s.TaskPatch,db:Session=Depends(
 def delete_task(scenario_id:str,task_id:str,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     task=lookup(db,m.DeliveryTask,task_id)
     if task.scenario_id!=scenario_id:raise HTTPException(status_code=404,detail='任务不存在于当前场景')
+    if db.scalar(select(m.DeliveryTask).where(m.DeliveryTask.predecessor_task_id==task_id)):
+        raise HTTPException(status_code=422,detail='该任务仍有关联的后续接驳分段，请先移除后续分段')
     db.delete(task);note(db,user,'task.delete',task_id);db.commit()
     return {'deleted':True}
 
@@ -271,7 +298,7 @@ class VehiclePatch(BaseModel):
     name: str | None = Field(default=None,min_length=2,max_length=80)
     capacity_kg: float | None = Field(default=None,gt=0,le=100000)
     speed_kmh: float | None = Field(default=None,gt=0,le=350)
-    range_km: float | None = Field(default=None,gt=0,le=5000)
+    range_km: float | None = Field(default=None,gt=0,le=20000)
     reliability: float | None = Field(default=None,ge=0,le=1)
 
 @app.patch(f'{PREFIX}/vehicles/{{vehicle_id}}',response_model=s.VehicleOut)
@@ -293,19 +320,25 @@ def update_edge(edge_id:str,body:s.EdgeStatusIn,db:Session=Depends(get_db),user:
     return edge
 
 @app.get(f'{PREFIX}/routes/preview')
-def route_preview(origin:str,destination:str,city_id:str='wuhan',strategy:str='balanced',algorithm:str='astar',weather:str='clear',db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
+def route_preview(origin:str,destination:str,city_id:str='wuhan',strategy:str='balanced',algorithm:str='astar',weather:str='clear',transport_mode:str='multimodal',db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
     if strategy not in ('balanced','fastest','safest') or algorithm not in ('astar','dijkstra') or weather not in ('clear','rain','fog','wind'):
         raise HTTPException(status_code=422,detail='不支持的规划参数')
     same_city_nodes(db,city_id,origin,destination)
-    nodes,edges,_=graph_and_fleet(db,city_id)
+    origin_node=lookup(db,m.Node,origin)
+    same_city_nodes(db,city_id,destination,network_id=origin_node.network_id)
+    nodes,edges,_=graph_and_fleet(db,city_id,origin_node.network_id)
+    if transport_mode not in ('multimodal','road','sea'):raise HTTPException(status_code=422,detail='不支持的运输方式')
+    if transport_mode!='multimodal':edges=[e for e in edges if e.get('transport_mode','road')==transport_mode]
     path=sim.find_path(sim.build_graph(nodes,edges),origin,destination,strategy=strategy,weather=weather,algorithm=algorithm)
     if path is None:raise HTTPException(status_code=409,detail='当前没有可通行的路径')
+    edge_modes={e['id']:e.get('transport_mode','road') for e in edges}
+    path['transport_modes']=list(dict.fromkeys(edge_modes[eid] for eid in path['edges']))
     return path
 
 @app.post(f'{PREFIX}/plans',response_model=s.PlanOut,status_code=201)
 def create_plan(body:s.PlanIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     scenario = lookup(db,m.Scenario,body.scenario_id)
-    node_data,edge_data,vehicle_data=graph_and_fleet(db,scenario.city_id)
+    node_data,edge_data,vehicle_data=graph_and_fleet(db,scenario.city_id,scenario.network_id)
     task_data=[s.TaskOut.model_validate(t).model_dump(mode='json') for t in scenario.tasks]
     if not task_data:raise HTTPException(status_code=422,detail='当前场景没有投送任务')
     if any(t['origin'] not in {n['id'] for n in node_data} or t['destination'] not in {n['id'] for n in node_data} for t in task_data):
@@ -396,13 +429,34 @@ def audit(limit:int=Query(default=50,ge=1,le=200),db:Session=Depends(get_db),_us
              'details':item.details,'created_at':item.created_at.isoformat()} for item in result]
 
 FRONTEND=Path(__file__).resolve().parents[2]/'frontend'
+ASSETS=StaticFiles(directory=FRONTEND/'assets')
+
+@app.get('/versioned-assets/{revision}/{filename}',include_in_schema=False)
+async def versioned_asset(revision:str,filename:str,request:Request):
+    response=await ASSETS.get_response(filename,request.scope)
+    response.headers['Cache-Control']='no-cache'
+    return response
+
 app.mount('/assets',StaticFiles(directory=FRONTEND/'assets'),name='assets')
+
+def frontend_html():
+    # Version the complete module directory: relative ES imports must also change
+    # URL when code changes, otherwise a fresh index can run cached old modules.
+    digest=sha256()
+    for asset in sorted((FRONTEND/'assets').iterdir()):
+        if asset.is_file():
+            digest.update(asset.name.encode())
+            digest.update(asset.read_bytes())
+    revision=digest.hexdigest()[:12]
+    html=(FRONTEND/'index.html').read_text(encoding='utf-8')
+    return HTMLResponse(html.replace('/assets/',f'/versioned-assets/{revision}/'),headers={'Cache-Control':'no-store'})
+
 @app.get('/')
 def index():
-    return FileResponse(FRONTEND/'index.html')
+    return frontend_html()
 
 @app.get('/{page:path}',include_in_schema=False)
 def spa_fallback(page:str):
     if '.' in page or page.startswith('api/'):
         raise HTTPException(status_code=404,detail='不存在的资源')
-    return FileResponse(FRONTEND/'index.html')
+    return frontend_html()

@@ -11,6 +11,7 @@ const paths = {
   chart:'<path d="M3 20h18M5 16l5-6 4 3 6-8"/><circle cx="5" cy="16" r="1"/><circle cx="10" cy="10" r="1"/><circle cx="14" cy="13" r="1"/><circle cx="20" cy="5" r="1"/>',
   shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/>',
+  ship:'<path d="M2 12l3 7h14l3-7-10-4-10 4zM6 10V4h12v6M12 4V1M2 22q3-3 6 0t6 0t6 0"/>',
   truck:'<path d="M3 6h12v11H3zM15 10h4l3 4v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>',
   target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
   activity:'<path d="M2 12h4l3-8 5 16 3-8h5"/>',

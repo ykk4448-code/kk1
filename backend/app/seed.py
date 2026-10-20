@@ -15,10 +15,12 @@ TASK_CATALOG = [
 ]
 
 def seed_database(db: Session):
-    if db.scalar(select(m.Node.id).limit(1)) is not None:
-        return
+    """Add missing demos without replacing any existing city or historical record."""
+    added_scenarios = []
     for city in CITIES:
         cid = city['id']
+        if db.scalar(select(m.Node.id).where(m.Node.city_id == cid).limit(1)) is not None:
+            continue
         prefix=city['code']
         landmarks=LANDMARKS[cid]
         lats=[l[2] for l in landmarks]; lons=[l[3] for l in landmarks]
@@ -43,11 +45,15 @@ def seed_database(db: Session):
                 speed_kmh=83 if aerial else 48+i*2,range_km=155 if aerial else 210,
                 reliability=.93+(i%4)*.012,home_node=node_id((i*2)%len(landmarks)),status='available'))
         sid={'wuhan':'SCN-001','shanghai':'SCN-003','chengdu':'SCN-004','shenzhen':'SCN-005'}[cid]
+        if db.get(m.Scenario, sid) is not None:
+            sid = f'SCN-BASE-{prefix}'
         db.add(m.Scenario(id=sid,city_id=cid,name=f'{city["name"]}城市联合投送基线',
             description=f'{city["name"]}示例地标与抽象规划通道下的应急物资配送想定。所有路线与风险值为教学仿真数据。',weather='clear',wind_kmh=12,visibility_km=15))
+        added_scenarios.append(sid)
         if cid=='wuhan':
             db.add(m.Scenario(id='SCN-002',city_id=cid,name='武汉强风约束对照想定',
                 description='相同城市通道条件下研究强风对配送策略的影响。',weather='wind',wind_kmh=45,visibility_km=5))
+            added_scenarios.append('SCN-002')
         db.flush()
         for i,(cargo,weight,origin,destination,deadline,priority) in enumerate(TASK_CATALOG,1):
             if origin>=len(landmarks) or destination>=len(landmarks):continue
@@ -56,12 +62,15 @@ def seed_database(db: Session):
             if cid=='wuhan' and i<=5:
                 db.add(m.DeliveryTask(id=f'{prefix}W{i:02}',scenario_id='SCN-002',code=f'{prefix}-W{i:03}',cargo=cargo,
                     weight_kg=weight,origin=node_id(origin),destination=node_id(destination),deadline_min=deadline*1.2,priority=priority))
-    db.add(m.User(username='admin',password_hash=hash_password('demo123456'),role='admin'))
-    db.add(m.User(username='analyst',password_hash=hash_password('demo123456'),role='viewer'))
-    db.commit()
+    for username, role in [('admin', 'admin'), ('analyst', 'viewer')]:
+        if db.scalar(select(m.User).where(m.User.username == username)) is None:
+            db.add(m.User(username=username,password_hash=hash_password('demo123456'),role=role))
+    db.flush()
     from .engine import generate_plan, simulate
     from .schemas import NodeOut, EdgeOut, VehicleOut, TaskOut, ScenarioOut
-    for idx,scen in enumerate(db.scalars(select(m.Scenario)).all(),1):
+    for sid in added_scenarios:
+        scen = db.get(m.Scenario, sid)
+        idx = {'SCN-001':1, 'SCN-002':2, 'SCN-003':3, 'SCN-004':4, 'SCN-005':5}.get(sid, 6)
         ns=db.scalars(select(m.Node).where(m.Node.city_id==scen.city_id)).all()
         ids={n.id for n in ns}
         es=[e for e in db.scalars(select(m.Edge)).all() if e.source in ids and e.target in ids]
@@ -72,12 +81,25 @@ def seed_database(db: Session):
         tasks=[TaskOut.model_validate(t).model_dump() for t in scen.tasks]
         sd=ScenarioOut.model_validate(scen).model_dump(mode='json')
         plan_data=generate_plan(nodes,edges,vehicles,tasks,sd,'balanced','astar')
-        plan=m.Plan(id=f'PLN-DEMO-{idx:03}',scenario_id=scen.id,name=f'{scen.name} · 初始基线',
+        pid = f'PLN-DEMO-{idx:03}'
+        if db.get(m.Plan, pid) is not None:
+            pid = f'PLN-BASE-{scen.id}'
+        plan=m.Plan(id=pid,scenario_id=scen.id,name=f'{scen.name} · 初始基线',
             strategy='balanced',algorithm='astar',assignment_data=plan_data['assignments'],summary_data=plan_data['summary'],
             snapshot_data={'scenario':sd,'nodes':nodes,'edges':edges,'vehicles':vehicles,'tasks':tasks,
                            'configuration':{'objective':'城市应急保障基线方案','units':[{'vehicle_id':v['id'],'deploy_node':v['home_node']} for v in vehicles], 'layers':{}}})
         db.add(plan);db.flush()
         result=simulate(plan_data,sd,vehicles,nodes,edges,seed=2026+idx,iterations=80)
-        db.add(m.SimulationRun(id=f'RUN-DEMO-{idx:03}',plan_id=plan.id,scenario_id=scen.id,
+        rid = f'RUN-DEMO-{idx:03}'
+        if db.get(m.SimulationRun, rid) is not None:
+            rid = f'RUN-BASE-{scen.id}'
+        db.add(m.SimulationRun(id=rid,plan_id=plan.id,scenario_id=scen.id,
                                seed=2026+idx,iterations=80,**result))
+        db.flush()
+    from .demo_network import seed_dense_network
+    seed_dense_network(db)
+    from .geographic_demo import seed_geographic_demo
+    seed_geographic_demo(db)
+    from .regional_demo import seed_regional_demo
+    seed_regional_demo(db)
     db.commit()

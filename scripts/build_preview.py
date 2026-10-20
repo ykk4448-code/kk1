@@ -3,6 +3,7 @@
 Preview does not persist writes; real app works at http://localhost:8000.
 """
 import os
+import base64
 from pathlib import Path
 import json
 import re
@@ -27,6 +28,7 @@ with TestClient(app) as client:
     scenes=client.get('/api/v1/scenarios',headers=headers).json()
     for s in scenes:
         sid=s['id']
+        paths.append(f"/network?city_id={s['city_id']}&network_id={s.get('network_id','baseline')}")
         paths.extend([f'/scenarios/{sid}/tasks',f'/scenarios/{sid}/configuration',f'/plans?scenario_id={sid}&limit=100',f'/simulations?scenario_id={sid}&limit=100'])
     for scen in scenes:
         for run in client.get('/api/v1/simulations',headers=headers,params={'scenario_id':scen['id']}).json():
@@ -61,6 +63,8 @@ with TestClient(app) as client:
 
 
 html=(ROOT/'frontend/index.html').read_text(encoding='utf-8')
+logo_uri='data:image/svg+xml;base64,'+base64.b64encode((ROOT/'frontend/assets/logo.svg').read_bytes()).decode('ascii')
+html=html.replace('/assets/logo.svg',logo_uri)
 css=(ROOT/'frontend/assets/styles.css').read_text(encoding='utf-8')
 html=html.replace('<link rel="stylesheet" href="/assets/styles.css">','<style>'+css+'</style>')
 html=html.replace('<link rel="stylesheet" href="/assets/workbench.css">','<style>'+(ROOT/'frontend/assets/workbench.css').read_text(encoding='utf-8')+'</style>')
@@ -70,10 +74,11 @@ html=html.replace('<link rel="stylesheet" href="/assets/mission-v7.css">','<styl
 html=html.replace('<link rel="stylesheet" href="/assets/cartographic-v8.css">','<style>'+(ROOT/'frontend/assets/cartographic-v8.css').read_text(encoding='utf-8')+'</style>')
 html=html.replace('<link rel="stylesheet" href="/assets/lightblue-v9.css">','<style>'+(ROOT/'frontend/assets/lightblue-v9.css').read_text(encoding='utf-8')+'</style>')
 html=html.replace('<link rel="stylesheet" href="/assets/engineering-v10.css">','<style>'+(ROOT/'frontend/assets/engineering-v10.css').read_text(encoding='utf-8')+'</style>')
+html=html.replace('<link rel="stylesheet" href="/assets/map-workspace.css">','<style>'+(ROOT/'frontend/assets/map-workspace.css').read_text(encoding='utf-8')+'</style>')
 # Frontend sources are ES modules. In preview only, flatten imports and exports
 # into one classic script. This is a read-only rendering snapshot, not product code.
 chunks=[]
-for name in ['api.js','charts.js','mission-view.js','map.js','assessment.js','app.js']:
+for name in ['api.js','charts.js','mission-view.js','routes.js','map-data.js','map-math.js','map.js','workspace.js','shipment-view.js','assessment.js','app.js']:
     js=(ROOT/'frontend/assets'/name).read_text(encoding='utf-8')
     js=re.sub(r'^import\s+.+?;\s*$', '', js,flags=re.MULTILINE)
     js=re.sub(r'\bexport\s+(?=async|const|function|class|let)', '', js)
@@ -133,6 +138,8 @@ window.fetch=async function(url,options={}){
 };'''
 prelude=prelude.replace('__JSON__',json.dumps(fixtures,ensure_ascii=False,separators=(',',':')))
 prelude=prelude.replace('__FRAMES__',json.dumps(replay_frames,ensure_ascii=False,separators=(',',':')))
+html=html.replace('<link rel="stylesheet" href="/assets/map-comfort.css">','<style>'+(ROOT/'frontend/assets/map-comfort.css').read_text(encoding='utf-8')+'</style>')
+html=html.replace('<link rel="stylesheet" href="/assets/regional.css">','<style>'+(ROOT/'frontend/assets/regional.css').read_text(encoding='utf-8')+'</style>')
 js=prelude+'\n'+'\n'.join(chunks)
 html=html.replace('<script type="module" src="/assets/app.js"></script>','<script>'+js+'</script>')
 mission_js=(ROOT/'frontend/assets/mission-v7.js').read_text(encoding='utf-8').replace("import {get} from './api.js';",'').replace('export function ','function ')

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <title>AETHER · 凌航</title>
+  <desc>A shaped flight corridor with a rising cyan trajectory.</desc>
+  <defs>
+    <linearGradient id="navy" x1="12" y1="4" x2="88" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#285E81"/>
+      <stop offset="1" stop-color="#102F49"/>
+    </linearGradient>
+  </defs>
+  <rect width="96" height="96" rx="25" fill="url(#navy)"/>
+  <rect x=".75" y=".75" width="94.5" height="94.5" rx="24.25" stroke="#A6D1E5" stroke-opacity=".3" stroke-width="1.5"/>
+  <path d="M18 74 41.5 23.8C43 20.5 47.5 20.5 49 23.8L67 62.5 55.5 66 45.2 42.3 31 74Z" fill="#F3FAFF"/>
+  <path d="m58 71 11.6-3.6L72.7 74H59.3Z" fill="#79D8E5"/>
+  <path d="M18 63C36 64.5 58.5 52.5 75 35" stroke="#102F49" stroke-width="8" stroke-linecap="round"/>
+  <path d="M18 63C36 64.5 58.5 52.5 75 35" stroke="#79D8E5" stroke-width="4" stroke-linecap="round"/>
+  <path d="m69 34 12-7-3 13-3-5Z" fill="#79D8E5"/>
+  <circle cx="18" cy="63" r="3.5" fill="#F3FAFF" stroke="#79D8E5" stroke-width="2"/>
+</svg>

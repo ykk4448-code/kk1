@@ -2,7 +2,7 @@ BASE='/api/v1'
 
 def test_city_catalog_and_isolated_network(client,admin_headers):
     cities=client.get(BASE+'/cities',headers=admin_headers).json()
-    assert {c['id'] for c in cities}=={'wuhan','shanghai','chengdu','shenzhen'}
+    assert {c['id'] for c in cities}=={'national','wuhan','shanghai','chengdu','shenzhen'}
     for city in cities:
         cid=city['id']
         net=client.get(BASE+'/network',params={'city_id':cid},headers=admin_headers).json()

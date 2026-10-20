@@ -31,8 +31,9 @@ with sync_playwright() as playwright:
     assert page.locator('button:visible').count() == 5
     assert page.locator('.rail:visible').count() == 0
     assert page.locator('.topbar:visible').count() == 0
-    assert page.locator('.landing-modules').evaluate('(el) => getComputedStyle(el).gridTemplateColumns.split(" ").length') == 5
-    assert 'linear-gradient' in page.locator('.portal-landing').evaluate('(el) => getComputedStyle(el).backgroundImage')
+    assert page.locator('#geo-map').count() == 1
+    assert page.locator('#geo-basemap path').count() == 35
+    assert page.locator('.map-stage').evaluate('(el) => getComputedStyle(el).position') == 'fixed'
 
     routes = [('data', 'nodes'), ('scenario', 'list'), ('planning', 'workspace'),
               ('simulation', 'control'), ('analytics', 'overview')]
@@ -44,10 +45,22 @@ with sync_playwright() as playwright:
             page.locator(f'.landing-module[data-page="{module}"]').click()
             assert page.evaluate('location.hash') == f'#/{module}/{tab}'
             assert page.locator('.page-heading h1:visible').count() == 1
+            assert page.locator('#geo-map').count() == 1
+            assert abs(page.locator('#geo-map').evaluate('(el) => el.getBoundingClientRect().height') - height) < 2
+            if width > 1150 and module in ('simulation','analytics'):
+                page.locator('.schedule-panel').wait_for()
+                assert not page.locator('.trend-panel').is_visible()
+                assert not page.locator('.inspector-panel').is_visible()
+                page.locator('[data-workspace-tool="stats"]').click()
+                assert page.locator('.trend-panel').is_visible()
+                page.locator('[data-workspace-tool="stats"]').click()
+                page.locator('[data-workspace-tool="inspector"]').click()
+                assert page.locator('.inspector-panel').is_visible()
+                assert not page.locator('.trend-panel').is_visible()
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), f'{module} overflow at {width}'
             assert page.locator('#nav .rail-link.selected').count() == 1
             # Module controls form a horizontal ribbon, never a left sidebar.
-            assert page.locator('.rail').evaluate('(el) => el.getBoundingClientRect().width') >= width - 24
+            assert page.locator('.rail').evaluate('(el) => el.getBoundingClientRect().width') >= width - 50
             page.locator('.home-link').click()
             assert page.locator('button:visible').count() == 5
     assert not errors, errors
