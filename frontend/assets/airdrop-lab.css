@@ -47,3 +47,16 @@
 .run-exp-save{height:29px;min-height:29px;padding:5px 11px;font-size:10px;white-space:nowrap}
 .run-exp-note{margin:0;font-size:10px;line-height:1.5;color:#7b909e}
 @media(max-width:800px){.run-experiment-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.run-exp-control{min-width:0}.run-exp-save{grid-column:1/-1}}
+
+/* Experiment records and parameter form */
+.experiment-intro{display:flex;align-items:center;gap:12px;margin:12px 0;padding:12px 15px;background:#f5f9fc;border:1px solid #d8e5ed;border-radius:6px;color:#5e788b;font-size:12px}
+.experiment-intro b{color:#234d68;white-space:nowrap}.experiment-intro span{flex:1;line-height:1.5}
+.civil-experiment-form{display:flex;flex-direction:column;gap:13px}
+.experiment-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.civil-experiment-form label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#58778c;min-width:0}
+.civil-experiment-form input,.civil-experiment-form select,.civil-experiment-form textarea{width:100%;min-width:0;min-height:34px;padding:7px 9px;border:1px solid #d0dfe8;border-radius:5px;background:#fbfdff;color:#24475e;font:inherit;font-size:12px}
+.civil-experiment-form textarea{resize:vertical;min-height:58px}
+.civil-experiment-form .button{align-self:flex-start}
+.experiment-intro .button{white-space:nowrap}
+@media(max-width:900px){.experiment-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.experiment-form-grid{grid-template-columns:1fr}.experiment-intro{align-items:flex-start;flex-wrap:wrap}.experiment-intro span{flex-basis:100%}.experiment-intro .button{width:100%}}
