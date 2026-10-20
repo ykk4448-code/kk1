@@ -93,7 +93,7 @@ html=html.replace('<link rel="stylesheet" href="/assets/map-workspace.css">','<s
 # Frontend sources are ES modules. In preview only, flatten imports and exports
 # into one classic script. This is a read-only rendering snapshot, not product code.
 chunks=[]
-for name in ['api.js','charts.js','mission-view.js','routes.js','map-data.js','map-math.js','map.js','workspace.js','shipment-view.js','experiment-console.js','flight-replay.js','assessment.js','app.js']:
+for name in ['api.js','charts.js','mission-view.js','routes.js','map-data.js','map-math.js','map.js','workspace.js','shipment-view.js','experiment-console.js','flight-replay.js','assessment.js','navigation.js','app.js']:
     js=(ROOT/'frontend/assets'/name).read_text(encoding='utf-8')
     if name=='api.js':
         # A snapshot client has no authentication flow, token, or write access.
@@ -163,6 +163,7 @@ prelude=prelude.replace('__JSON__',json.dumps(fixtures,ensure_ascii=False,separa
 prelude=prelude.replace('__FRAMES__',json.dumps(replay_frames,ensure_ascii=False,separators=(',',':')))
 html=html.replace('<link rel="stylesheet" href="/assets/map-comfort.css">','<style>'+(ROOT/'frontend/assets/map-comfort.css').read_text(encoding='utf-8')+'</style>')
 html=html.replace('<link rel="stylesheet" href="/assets/regional.css">','<style>'+(ROOT/'frontend/assets/regional.css').read_text(encoding='utf-8')+'</style>')
+html=html.replace('<link rel="stylesheet" href="/assets/platform.css">','<style>'+(ROOT/'frontend/assets/platform.css').read_text(encoding='utf-8')+'</style>')
 html=html.replace('<link rel="stylesheet" href="/assets/airdrop-lab.css">','<style>'+(ROOT/'frontend/assets/airdrop-lab.css').read_text(encoding='utf-8')+'</style>')
 js=prelude+'\n'+'\n'.join(chunks)
 html=html.replace('<script type="module" src="/assets/app.js"></script>','<script>'+js+'</script>')

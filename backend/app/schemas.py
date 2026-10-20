@@ -242,7 +242,7 @@ class AirdropExperimentParameters(BaseModel):
 
 class ExperimentIn(BaseModel):
     scenario_id: str = Field(min_length=2, max_length=40)
-    name: str = Field(default='民用应急空投实验', min_length=2, max_length=120)
+    name: str = Field(default='应急空投实验', min_length=2, max_length=120)
     notes: str = Field(default='', max_length=2000)
     strategy: Literal['balanced', 'fastest', 'safest'] = 'balanced'
     algorithm: Literal['astar', 'dijkstra'] = 'astar'

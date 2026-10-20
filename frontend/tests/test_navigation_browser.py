@@ -37,11 +37,11 @@ with sync_playwright() as p:
         page.locator('.home-link').click()
         assert page.locator('button:visible').count() == 5
     page.evaluate("location.hash='#/scenario/tasks'")
-    page.locator('#nav .rail-link.selected').filter(has_text='任务编排').wait_for()
+    page.locator('#nav .rail-link.selected').filter(has_text='投送任务').wait_for()
     page.locator('#nav [data-tab="formations"]').click()
     assert page.evaluate('location.hash') == '#/scenario/formations'
     page.go_back(wait_until='domcontentloaded')
-    page.locator('#nav .rail-link.selected').filter(has_text='任务编排').wait_for()
+    page.locator('#nav .rail-link.selected').filter(has_text='投送任务').wait_for()
     page.evaluate("location.hash='#/home'")
     page.locator('.landing-module').first.wait_for()
     page.set_viewport_size({'width':390,'height':844})

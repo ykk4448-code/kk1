@@ -73,7 +73,7 @@ def seed_civil_airdrop_demo(db: Session):
         name='两岸无人机直达空投 · 标准实验',
         description='6 个大陆空投区、6 个台湾接收区、18 项直达空投任务与 24 架无人机资源。地图显示区域参考位置，实验使用独立模型距离。',
         weather='clear', wind_kmh=8, visibility_km=15, status='ready',
-        configuration_data={'objective':'比较民用应急物资空投在不同环境假设下的交付表现。','layers':{}})
+        configuration_data={'objective':'比较应急物资空投在不同环境假设下的交付表现。','layers':{}})
     db.add(scene)
     db.flush()
 
@@ -105,7 +105,7 @@ def seed_civil_airdrop_demo(db: Session):
                           'visibility_km':params['visibility_km']})
     planned = generate_plan(nodes, edges, vehicles, tasks, scenario_data, 'balanced', 'astar', experiment=params)
     plan = m.Plan(
-        id=BASELINE_PLAN_ID, scenario_id=SCENARIO_ID, name='民用应急空投 · 基线方案',
+        id=BASELINE_PLAN_ID, scenario_id=SCENARIO_ID, name='应急空投 · 基线方案',
         strategy='balanced', algorithm='astar', assignment_data=planned['assignments'],
         summary_data=planned['summary'],
         snapshot_data={'scenario':scenario_data,'nodes':nodes,'edges':edges,'vehicles':vehicles,

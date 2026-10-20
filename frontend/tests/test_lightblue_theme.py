@@ -41,6 +41,7 @@ def test_app_surfaces_have_palette_coverage():
 
 def test_first_level_remains_five_modules():
     app=(ROOT/'frontend/assets/app.js').read_text(encoding='utf-8')
-    for label in ('空投资源','应急场景','空投方案','空投仿真','实验评估'):
-        assert label in app
+    navigation=(ROOT/'frontend/assets/navigation.js').read_text(encoding='utf-8')
+    for label in ('基础数据','想定管理','联合投送方案','行动推演','评估分析'):
+        assert label in navigation
     assert 'landing-modules' in app

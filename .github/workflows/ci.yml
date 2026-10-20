@@ -29,6 +29,8 @@ jobs:
           node --test frontend/tests/test_map_math.mjs
           node --test frontend/tests/test_shipments.mjs
           node --check frontend/assets/app.js
+          node --check frontend/assets/navigation.js
+          node --test frontend/tests/test_platform_navigation.mjs
           node --check frontend/assets/assessment.js
           node --check frontend/assets/experiment-console.js
           node --test frontend/tests/test_experiment_console.mjs

@@ -1,0 +1,10 @@
+/* Keep the previous home composition; only the agreed product name changes. */
+.map-workspace .portal-mode .landing-brand b{font-size:22px!important;letter-spacing:.5px!important}
+.map-workspace .portal-mode .landing-brand small{font-size:8px!important;letter-spacing:.8px}
+.map-workspace .workspace-mode .brand{flex-basis:275px!important;width:275px!important}
+.map-workspace .workspace-mode .brand-words strong{font-size:19px!important;letter-spacing:.5px!important;white-space:nowrap}
+.map-workspace .workspace-mode .brand-words small{font-size:9px!important;letter-spacing:1px}
+.workspace-has-assessment .inspector-endurance{display:flex;justify-content:space-between;gap:10px;font-size:10px;margin-top:9px;color:#628096}
+.workspace-has-assessment .inspector-endurance b{font-weight:500}
+@media(max-width:1200px){.map-workspace .workspace-mode .brand{flex-basis:245px!important;width:245px!important}.map-workspace .workspace-mode .brand-words strong{font-size:17px!important}}
+@media(max-width:759px){.map-workspace .workspace-mode .brand{flex:1!important;width:auto!important}.map-workspace .workspace-mode .brand-words strong{font-size:18px!important}.map-workspace .portal-mode .landing-brand b{font-size:19px!important}}

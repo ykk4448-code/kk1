@@ -14,8 +14,8 @@ DOC = (ROOT / "docs/civilian-airdrop-experiments.md").read_text(encoding="utf-8"
 
 
 def test_navigation_and_task_forms_use_civilian_airdrop_language():
-    for label in ("空投资源", "应急场景", "空投方案", "空投仿真", "实验评估"):
-        assert label in APP
+    for label in ("基础数据", "想定管理", "联合投送方案", "行动推演", "评估分析"):
+        assert label in (ROOT/"frontend/assets/navigation.js").read_text(encoding="utf-8")
     assert "function newTask(task)" in APP
     task_form = APP[APP.index("function newTask(task)"):APP.index("function hideDialog()")]
     assert "AIR-MAIN-" in task_form and "AIR-ISLE-" in task_form
