@@ -178,6 +178,8 @@ def update_node(node_id:str,body:s.NodePatch,db:Session=Depends(get_db),user:m.U
     if not changes:raise HTTPException(status_code=422,detail='没有提供有效的节点更新内容')
     candidate_lat=changes.get('lat',node.lat);candidate_lon=changes.get('lon',node.lon)
     ensure_in_city(node.city_id,candidate_lat,candidate_lon)
+    if node.network_id=='civil-airdrop' and any(k in changes for k in ('lat','lon')):
+        raise HTTPException(status_code=422,detail='合成空投场景使用固定占位坐标，不允许修改为真实地理坐标')
     for name,value in changes.items():setattr(node,name,value)
     note(db,user,'network.node.update',node.id,changes);db.commit();db.refresh(node)
     return node
@@ -188,8 +190,11 @@ def create_edge(body:s.EdgeIn,db:Session=Depends(get_db),user:m.User=Depends(can
     if a.city_id!=b.city_id:raise HTTPException(status_code=422,detail='禁止跨城市创建路网通道')
     if a.network_id!=b.network_id:raise HTTPException(status_code=422,detail='禁止连接不同路网的节点')
     ensure_active_network(db,a.network_id)
-    if a.network_id=='civil-airdrop' and body.transport_mode!='airdrop':
-        raise HTTPException(status_code=422,detail='民用空投网络只允许无人机空投通道')
+    if a.network_id=='civil-airdrop':
+        shore_a='mainland' if a.id.startswith('AIR-MAIN-') else 'island' if a.id.startswith('AIR-ISLE-') else ''
+        shore_b='mainland' if b.id.startswith('AIR-MAIN-') else 'island' if b.id.startswith('AIR-ISLE-') else ''
+        if body.transport_mode!='airdrop' or not shore_a or not shore_b or shore_a==shore_b:
+            raise HTTPException(status_code=422,detail='合成空投网络只允许大陆侧与台湾侧之间的直接空投示意通道')
     # Prevent ambiguous parallel edges in the bidirectional model.
     existing=db.scalar(select(m.Edge.id).where(
         ((m.Edge.source==body.source)&(m.Edge.target==body.target)) |
@@ -285,8 +290,15 @@ def create_task(scenario_id:str,body:s.TaskIn,db:Session=Depends(get_db),user:m.
     lookup(db,m.Scenario,scenario_id)
     scenario=lookup(db,m.Scenario,scenario_id)
     ensure_active_scenario(scenario)
-    if scenario.network_id=='civil-airdrop' and body.transport_mode!='airdrop':
-        raise HTTPException(status_code=422,detail='民用空投想定中的所有任务必须使用无人机空投')
+    if scenario.network_id=='civil-airdrop':
+        origin_shore='mainland' if body.origin.startswith('AIR-MAIN-') else 'island' if body.origin.startswith('AIR-ISLE-') else ''
+        destination_shore='mainland' if body.destination.startswith('AIR-MAIN-') else 'island' if body.destination.startswith('AIR-ISLE-') else ''
+        if body.transport_mode!='airdrop' or not origin_shore or not destination_shore or origin_shore==destination_shore:
+            raise HTTPException(status_code=422,detail='空投任务必须连接大陆侧与台湾侧的合成接收点')
+        direct=db.scalar(select(m.Edge.id).where(
+            (((m.Edge.source==body.origin)&(m.Edge.target==body.destination))|((m.Edge.source==body.destination)&(m.Edge.target==body.origin))),
+            m.Edge.transport_mode=='airdrop',m.Edge.status!='closed').limit(1))
+        if not direct:raise HTTPException(status_code=422,detail='起终点之间没有可用的直接空投示意通道')
     same_city_nodes(db,scenario.city_id,body.origin,body.destination,network_id=scenario.network_id)
     if body.leg_index>1 and not body.predecessor_task_id:
         raise HTTPException(status_code=422,detail='后续运输分段必须关联前序任务')
@@ -374,8 +386,12 @@ def route_preview(origin:str,destination:str,city_id:str='wuhan',strategy:str='b
     nodes,edges,_=graph_and_fleet(db,city_id,origin_node.network_id)
     if transport_mode not in ('multimodal','road','sea','airdrop'):raise HTTPException(status_code=422,detail='不支持的投送方式')
     ensure_active_network(db,origin_node.network_id)
-    if origin_node.network_id=='civil-airdrop' and transport_mode not in ('multimodal','airdrop'):
-        raise HTTPException(status_code=422,detail='民用空投场景不提供陆路或海运路线')
+    if origin_node.network_id=='civil-airdrop':
+        origin_shore='mainland' if origin.startswith('AIR-MAIN-') else 'island' if origin.startswith('AIR-ISLE-') else ''
+        destination_shore='mainland' if destination.startswith('AIR-MAIN-') else 'island' if destination.startswith('AIR-ISLE-') else ''
+        if transport_mode not in ('multimodal','airdrop') or not origin_shore or not destination_shore or origin_shore==destination_shore:
+            raise HTTPException(status_code=422,detail='当前合成场景只提供大陆侧与台湾侧之间的直接空投示意路线')
+        edges=[e for e in edges if {e['source'],e['target']}=={origin,destination} and e.get('transport_mode')=='airdrop']
     if transport_mode!='multimodal':edges=[e for e in edges if e.get('transport_mode','road')==transport_mode]
     path=sim.find_path(sim.build_graph(nodes,edges),origin,destination,strategy=strategy,weather=weather,algorithm=algorithm)
     if path is None:raise HTTPException(status_code=409,detail='当前没有可通行的路径')
@@ -391,7 +407,9 @@ def create_plan(body:s.PlanIn,db:Session=Depends(get_db),user:m.User=Depends(can
     task_data=[s.TaskOut.model_validate(t).model_dump(mode='json') for t in scenario.tasks]
     if not task_data:raise HTTPException(status_code=422,detail='当前场景没有投送任务')
     if any(t['origin'] not in {n['id'] for n in node_data} or t['destination'] not in {n['id'] for n in node_data} for t in task_data):
-        raise HTTPException(status_code=422,detail='该想定存在不属于当前城市的任务节点')
+        raise HTTPException(status_code=422,detail='该想定存在不属于当前网络的任务节点')
+    if scenario.network_id=='civil-airdrop' and (any(t.get('transport_mode')!='airdrop' for t in task_data) or any(e.get('transport_mode')!='airdrop' for e in edge_data) or any(v.get('category')!='drone' for v in vehicle_data)):
+        raise HTTPException(status_code=422,detail='民用空投想定仅允许直接空投通道、空投任务与无人机平台')
     configuration=normalize_configuration(scenario.configuration_data,vehicle_data)
     planned_vehicles=scenario_vehicles(configuration,vehicle_data)
     result=sim.generate_plan(node_data,edge_data,planned_vehicles,task_data,
