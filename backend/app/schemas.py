@@ -30,7 +30,7 @@ class EdgeIn(BaseModel):
     target: str
     distance_km: float = Field(gt=0, le=10000)
     risk: float = Field(default=0.05, ge=0, le=0.95)
-    transport_mode: Literal['road','sea'] = 'road'
+    transport_mode: Literal['road','sea','airdrop'] = 'road'
     terrain: Literal['urban','coastal','mountain','rural'] = 'urban'
     @model_validator(mode='after')
     def no_loop(self):
@@ -199,6 +199,45 @@ class RunOut(ORMModel):
     metrics: dict
     events: list
     samples: list
+    experiment_data: dict = Field(default_factory=dict)
+    created_at: datetime
+
+class AirdropExperimentParameters(BaseModel):
+    """Coarse, synthetic environmental variables for civilian emergency-aid demos."""
+    weather: Literal['clear','rain','wind','fog'] = 'clear'
+    wind_kmh: float = Field(default=8, ge=0, le=60)
+    rain: Literal['none','light','moderate'] = 'none'
+    cloud_base: Literal['high','medium','low'] = 'high'
+    sea_state: Literal['calm','moderate','rough'] = 'calm'
+    payload_profile: Literal['light','standard','medical'] = 'standard'
+    altitude_profile: Literal['conservative','standard','high'] = 'standard'
+    battery_reserve_pct: Literal[20,30,40] = 30
+
+class ExperimentIn(BaseModel):
+    scenario_id: str = Field(min_length=2, max_length=40)
+    name: str = Field(default='民用应急空投实验', min_length=2, max_length=120)
+    notes: str = Field(default='', max_length=2000)
+    strategy: Literal['balanced','fastest','safest'] = 'balanced'
+    algorithm: Literal['astar','dijkstra'] = 'astar'
+    seed: int = Field(default=2026, ge=0, le=2147483647)
+    iterations: int = Field(default=80, ge=1, le=500)
+    parameters: AirdropExperimentParameters = Field(default_factory=AirdropExperimentParameters)
+
+class ExperimentPatch(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    notes: str | None = Field(default=None, max_length=2000)
+
+class ExperimentOut(ORMModel):
+    id: str
+    scenario_id: str
+    plan_id: str
+    run_id: str
+    name: str
+    notes: str
+    parameters: dict
+    results: dict
+    model_version: str
+    created_by: str
     created_at: datetime
 
 class EdgeStatusIn(BaseModel):
