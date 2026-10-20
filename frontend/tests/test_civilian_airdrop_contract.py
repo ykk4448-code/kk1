@@ -22,6 +22,8 @@ def test_navigation_and_task_forms_use_civilian_airdrop_language():
     assert "前置空投任务" not in task_form
     assert "task?.deadline_min||150" in task_form
     assert "03 / 结果复盘" in APP and "安全返航" not in APP
+    assert "names[t.transport_mode]||'未指定投送方式'" in APP
+    assert "联合投送地理沙盘" not in APP
 
 
 def test_experiment_controls_create_and_export_server_records():
