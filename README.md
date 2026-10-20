@@ -4,7 +4,7 @@
 
 ## 当前活动工作区
 
-- **活动网络**：\`civil-airdrop\`；默认想定：\`SCN-CIVIL-AIRDROP\`。
+- **活动网络**：`civil-airdrop`；默认想定：`SCN-CIVIL-AIRDROP`。
 - **合成数据**：6 个节点、6 条直接空投示意通道、6 台无人机、6 项民生物资任务；预置 80 轮基线仿真和实验记录。
 - **环境实验**：天气、风速、降雨、云底、海况、物资载荷、飞行剖面、电量预留、策略、算法、随机种子和迭代轮数。
 - **可追溯记录**：每条实验绑定参数/模型因子快照、方案、仿真运行、结果指标、随机种子、迭代轮数和模型版本；相同输入与种子可复现同一随机序列。
@@ -16,12 +16,12 @@
 
 在仓库根目录执行：
 
-\`\`\`bash
+```bash
 pip install -r backend/requirements-dev.txt
 PYTHONPATH=backend uvicorn app.main:app --app-dir backend --reload
-\`\`\`
+```
 
-打开本地服务地址 \`http://127.0.0.1:8000\`。在演示模式下可使用仓库预置的演示管理员登录；部署到非演示环境前，请关闭演示模式并配置安全认证，不要沿用演示凭据。
+打开本地服务地址 `http://127.0.0.1:8000`。在演示模式下可使用仓库预置的演示管理员登录；部署到非演示环境前，请关闭演示模式并配置安全认证，不要沿用演示凭据。
 
 ## 实验记录流程
 
@@ -35,15 +35,15 @@ PYTHONPATH=backend uvicorn app.main:app --app-dir backend --reload
 
 ## 验证
 
-\`\`\`bash
+```bash
 PYTHONPATH=backend pytest backend/tests -q
 node --check frontend/assets/app.js
 node --check frontend/assets/assessment.js
 node --check frontend/assets/map.js
 python scripts/build_preview.py
-\`\`\`
+```
 
-离线 \`preview.html\` 是只读快照，不能写入新场景、运行新仿真或创建实验记录。
+离线 `preview.html` 是只读快照，不能写入新场景、运行新仿真或创建实验记录。
 
 ## 历史版本设计记录（只用于追溯，不代表当前活动产品）
 
