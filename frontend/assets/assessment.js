@@ -214,9 +214,11 @@ export function mountAssessment(context){
    return;
   }
   if(action==='run-experiment'){
-   const status=$('#desk-experiment-status');if(status)status.textContent='正在运行实验并保存记录…';
+   const status=$('#desk-experiment-status');
+   if(typeof context.onExperiment!=='function'){if(status)status.textContent='当前环境不支持写入实验记录。';return;}
+   if(status)status.textContent='正在运行实验并保存记录…';
    const params={...experimentVars,wind_kmh:Number(experimentVars.wind_kmh),battery_reserve_pct:Number(experimentVars.battery_reserve_pct)};
-   Promise.resolve(context.onExperiment?.(params)).then(()=>{if(status){status.textContent='实验运行完成；记录已提交。';status.classList.add('is-saved');}}).catch(error=>{if(status)status.textContent='实验未完成：'+(error?.message||'请求失败');});
+   Promise.resolve(context.onExperiment(params)).then(()=>{if(status){status.textContent='实验运行完成；记录已提交。';status.classList.add('is-saved');}}).catch(error=>{if(status)status.textContent='实验未完成：'+(error?.message||'请求失败');});
    return;
   }
   if(action==='previous')seek([...data.events].reverse().find(e=>e.at_min<minute-.01)?.at_min||0);
