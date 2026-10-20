@@ -1,4 +1,5 @@
 from app.engine import build_graph, find_path, generate_plan, simulate
+from app.airdrop import environmental_factors, parameter_summary
 
 NODES=[dict(id=x,x=i*10.,y=0.) for i,x in enumerate('ABCD')]
 EDGES=[dict(id='ab',source='A',target='B',distance_km=10.,risk=.04,status='open'),
@@ -55,3 +56,62 @@ def test_repeatability_and_sample_limits():
 def test_offline_infrastructure_excluded():
     nodes=[{**n,'status':'offline'} if n['id']=='C' else n for n in NODES]
     assert find_path(build_graph(nodes,EDGES),'A','D') is None
+
+
+def test_civilian_airdrop_environment_factors_change_plan_and_are_snapshotted():
+    nodes=[
+        dict(id='AIR-MAIN-A',x=0.,y=0.,status='online',health=100),
+        dict(id='AIR-ISLE-A',x=10.,y=0.,status='online',health=100),
+    ]
+    edges=[dict(id='AIR-E01',source='AIR-MAIN-A',target='AIR-ISLE-A',distance_km=20.,
+                risk=.05,status='open',transport_mode='airdrop',terrain='coastal')]
+    drones=[dict(id='UAV-TEST',code='UAV-TEST',name='test drone',category='drone',
+                 capacity_kg=30.,speed_kmh=70.,range_km=120.,reliability=.96,
+                 home_node='AIR-MAIN-A',status='available')]
+    tasks=[dict(id='TASK-TEST',code='TASK-TEST',cargo='medical aid',weight_kg=10.,
+                origin='AIR-MAIN-A',destination='AIR-ISLE-A',deadline_min=500.,priority=1,
+                transport_mode='airdrop')]
+    scenario=dict(weather='clear',wind_kmh=8.,visibility_km=15.)
+    baseline={'weather':'clear','wind_kmh':8,'rain':'none','cloud_base':'high',
+              'sea_state':'calm','payload_profile':'standard','altitude_profile':'standard',
+              'battery_reserve_pct':30}
+    adverse={'weather':'wind','wind_kmh':40,'rain':'moderate','cloud_base':'low',
+             'sea_state':'rough','payload_profile':'medical','altitude_profile':'high',
+             'battery_reserve_pct':30}
+    baseline_factors=environmental_factors(baseline)
+    adverse_factors=environmental_factors(adverse)
+    assert adverse_factors['duration_factor'] > baseline_factors['duration_factor']
+    assert adverse_factors['risk_factor'] > baseline_factors['risk_factor']
+    assert adverse_factors['range_factor'] < baseline_factors['range_factor']
+    assert parameter_summary(adverse)['model_factors']==adverse_factors
+    baseline_plan=generate_plan(nodes,edges,drones,tasks,scenario,experiment=baseline)
+    adverse_plan=generate_plan(nodes,edges,drones,tasks,scenario,experiment=adverse)
+    assert baseline_plan['summary']['assigned_count']==1
+    assert adverse_plan['summary']['assigned_count']==1
+    assert adverse_plan['assignments'][0]['duration_min'] > baseline_plan['assignments'][0]['duration_min']
+    assert adverse_plan['assignments'][0]['risk'] > baseline_plan['assignments'][0]['risk']
+    base_run=simulate(baseline_plan,scenario,drones,nodes,edges,seed=2026,iterations=12,experiment=baseline)
+    adverse_run=simulate(adverse_plan,scenario,drones,nodes,edges,seed=2026,iterations=12,experiment=adverse)
+    assert base_run['samples'] != adverse_run['samples']
+
+
+def test_civilian_airdrop_battery_reserve_changes_range_feasibility():
+    nodes=[
+        dict(id='AIR-MAIN-A',x=0.,y=0.,status='online',health=100),
+        dict(id='AIR-ISLE-A',x=10.,y=0.,status='online',health=100),
+    ]
+    edges=[dict(id='AIR-E01',source='AIR-MAIN-A',target='AIR-ISLE-A',distance_km=34.,
+                risk=.02,status='open',transport_mode='airdrop',terrain='coastal')]
+    drones=[dict(id='UAV-RANGE',code='UAV-RANGE',name='range test',category='drone',
+                 capacity_kg=30.,speed_kmh=70.,range_km=50.,reliability=.96,
+                 home_node='AIR-MAIN-A',status='available')]
+    tasks=[dict(id='TASK-RANGE',code='TASK-RANGE',cargo='aid',weight_kg=10.,
+                origin='AIR-MAIN-A',destination='AIR-ISLE-A',deadline_min=500.,priority=1,
+                transport_mode='airdrop')]
+    scenario=dict(weather='clear',wind_kmh=8.,visibility_km=15.)
+    reserve20={'weather':'clear','wind_kmh':8,'cloud_base':'high','battery_reserve_pct':20}
+    reserve40={**reserve20,'battery_reserve_pct':40}
+    low=generate_plan(nodes,edges,drones,tasks,scenario,experiment=reserve20)
+    high=generate_plan(nodes,edges,drones,tasks,scenario,experiment=reserve40)
+    assert low['summary']['assigned_count']==1
+    assert high['summary']['assigned_count']==0

@@ -1,4 +1,4 @@
-"""Produce a standalone read-only AETHER 4.0 HTML preview with live demo API snapshots.
+"""Produce a standalone read-only AETHER 5.0 civilian airdrop preview with API snapshots.
 
 Preview does not persist writes; real app works at http://localhost:8000.
 """
@@ -29,10 +29,14 @@ with TestClient(app) as client:
     for s in scenes:
         sid=s['id']
         paths.append(f"/network?city_id={s['city_id']}&network_id={s.get('network_id','baseline')}")
-        paths.extend([f'/scenarios/{sid}/tasks',f'/scenarios/{sid}/configuration',f'/plans?scenario_id={sid}&limit=100',f'/simulations?scenario_id={sid}&limit=100'])
+        paths.extend([f'/scenarios/{sid}/tasks',f'/scenarios/{sid}/configuration',f'/plans?scenario_id={sid}&limit=100',f'/simulations?scenario_id={sid}&limit=100',f'/experiments?scenario_id={sid}&limit=100'])
+        for plan in client.get('/api/v1/plans',headers=headers,params={'scenario_id':sid,'limit':100}).json():
+            paths.append(f"/plans/{plan['id']}")
+        for experiment in client.get('/api/v1/experiments',headers=headers,params={'scenario_id':sid,'limit':100}).json():
+            paths.append(f"/experiments/{experiment['id']}")
     for scen in scenes:
         for run in client.get('/api/v1/simulations',headers=headers,params={'scenario_id':scen['id']}).json():
-            paths.extend([f"/simulations/{run['id']}/report",f"/simulations/{run['id']}/telemetry?minute=0.00"])
+            paths.extend([f"/simulations/{run['id']}",f"/simulations/{run['id']}/report",f"/simulations/{run['id']}/telemetry?minute=0.00"])
     for scen in scenes:
         for run in client.get('/api/v1/simulations',headers=headers,params={'scenario_id':scen['id']}).json():
             paths.append(f"/simulations/{run['id']}/assessment?minute=0.000")
@@ -140,6 +144,7 @@ prelude=prelude.replace('__JSON__',json.dumps(fixtures,ensure_ascii=False,separa
 prelude=prelude.replace('__FRAMES__',json.dumps(replay_frames,ensure_ascii=False,separators=(',',':')))
 html=html.replace('<link rel="stylesheet" href="/assets/map-comfort.css">','<style>'+(ROOT/'frontend/assets/map-comfort.css').read_text(encoding='utf-8')+'</style>')
 html=html.replace('<link rel="stylesheet" href="/assets/regional.css">','<style>'+(ROOT/'frontend/assets/regional.css').read_text(encoding='utf-8')+'</style>')
+html=html.replace('<link rel="stylesheet" href="/assets/airdrop-lab.css">','<style>'+(ROOT/'frontend/assets/airdrop-lab.css').read_text(encoding='utf-8')+'</style>')
 js=prelude+'\n'+'\n'.join(chunks)
 html=html.replace('<script type="module" src="/assets/app.js"></script>','<script>'+js+'</script>')
 mission_js=(ROOT/'frontend/assets/mission-v7.js').read_text(encoding='utf-8').replace("import {get} from './api.js';",'').replace('export function ','function ')
