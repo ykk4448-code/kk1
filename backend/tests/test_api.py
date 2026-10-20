@@ -96,6 +96,10 @@ def test_catalog_create_and_conflict_detection(client,admin_headers):
         'code':'UAV-TEST-1','name':'新增民用应急无人机','category':'drone','capacity_kg':30,
         'speed_kmh':70,'range_km':140,'reliability':.96,'home_node':'AIR-MAIN-TEST'})
     assert vehicle.status_code==201,vehicle.text
+    bad_home=client.post(BASE+'/vehicles',headers=h,json={
+        'code':'UAV-TEST-2','name':'错误部署位置无人机','category':'drone','capacity_kg':30,
+        'speed_kmh':70,'range_km':140,'reliability':.96,'home_node':'AIR-ISLE-A'})
+    assert bad_home.status_code==422
     network=client.get(BASE+'/network',headers=h).json()
     assert len(network['nodes'])==7 and len(network['edges'])==7 and len(network['vehicles'])==7
     bad_node=client.post(BASE+'/network/nodes',headers=h,json={**node_body,'id':'REAL-GEO-1','lon':121.5})
