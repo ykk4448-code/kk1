@@ -214,14 +214,21 @@ function experimentsWorkspace(){
   const q=x.parameters||{},m=(x.results||{}).metrics||{};
   const weather={clear:'晴朗',rain:'降雨',wind:'有风',fog:'低能见度'}[q.weather]||q.weather||'—';
   const rain={none:'无雨',light:'小雨',moderate:'中雨'}[q.rain]||q.rain||'—';
-  return '<tr><td><b>'+txt(x.name)+'</b><small class="mono">'+txt(x.id)+' · '+txt(x.model_version)+'</small>'+(x.notes?'<small>'+txt(x.notes)+'</small>':'')+'</td>'+
+  const cloud={high:'高云底',medium:'中等云底',low:'低云底'}[q.cloud_base]||q.cloud_base||'—';
+  const sea={calm:'平稳',moderate:'中等',rough:'较大涌浪'}[q.sea_state]||q.sea_state||'—';
+  const payload={light:'轻载物资',standard:'标准物资',medical:'医疗物资'}[q.payload_profile]||q.payload_profile||'—';
+  const altitude={conservative:'保守',standard:'标准',high:'较高'}[q.altitude_profile]||q.altitude_profile||'—';
+  const strategy={balanced:'综合均衡',fastest:'时效优先',safest:'稳健策略'}[x.results?.strategy]||x.results?.strategy||'—';
+  const algorithm={astar:'A*',dijkstra:'Dijkstra'}[x.results?.algorithm]||x.results?.algorithm||'—';
+  return '<tr><td><b>'+txt(x.name)+'</b><small class="mono">'+txt(x.id)+' · '+txt(x.model_version)+'</small><small>创建者 '+txt(x.created_by)+'</small>'+(x.notes?'<small>'+txt(x.notes)+'</small>':'')+'</td>'+
    '<td>'+new Date(x.created_at).toLocaleString('zh-CN')+'</td>'+
-   '<td>'+txt(weather)+' · 风 '+nfmt(q.wind_kmh,0)+' · '+txt(rain)+'<small>海况 '+txt(q.sea_state)+' · 载荷 '+txt(q.payload_profile)+' · 余量 '+txt(q.battery_reserve_pct)+'%</small></td>'+
+   '<td>'+txt(weather)+' · 风 '+nfmt(q.wind_kmh,0)+' · '+txt(rain)+'<small>'+txt(cloud)+' · 海况 '+txt(sea)+'</small><small>'+txt(payload)+' · 飞行剖面 '+txt(altitude)+' · 电量预留 '+txt(q.battery_reserve_pct)+'%</small></td>'+
+   '<td>'+txt(strategy)+' / '+txt(algorithm)+'</td>'+
    '<td>'+(x.results?.iterations??'—')+' / '+(x.results?.seed??'—')+'</td>'+
    '<td>'+nfmt(m.success_pct,1)+'%</td><td>'+nfmt(m.on_time_pct,1)+'%</td><td>'+nfmt(m.score,1)+'</td>'+
    '<td>'+action('打开回放','view-experiment','small','data-id="'+txt(x.id)+'"')+' '+action('导出 JSON','export-experiment','small','data-id="'+txt(x.id)+'"')+'</td></tr>';
  }).join('');
- const table=records.length?'<div class="table-wrap"><table><thead><tr><th>实验名称 / 编号</th><th>创建时间</th><th>环境与变量</th><th>轮次 / 种子</th><th>成功率</th><th>准点率</th><th>评分</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></div>':empty('还没有实验记录；提交上方参数即可生成第一条记录。');
+ const table=records.length?'<div class="table-wrap"><table><thead><tr><th>实验名称 / 编号</th><th>创建时间</th><th>环境与变量</th><th>策略 / 算法</th><th>轮次 / 种子</th><th>成功率</th><th>准点率</th><th>评分</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></div>':empty('还没有实验记录；提交上方参数即可生成第一条记录。');
  return panel('新建可复现实验','参数快照 · 随机种子 · 多轮结果',form)+panel('历史实验记录','每次运行单独保存；修改参数不会覆盖已有记录',table,action('刷新记录','refresh-experiments','light'));
 }
 function simulationModule(){const tab=S.tabs.simulation,r=run();let content='';
