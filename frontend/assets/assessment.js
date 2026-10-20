@@ -1,3 +1,4 @@
+import {createFlightReplay,advanceFlightTime,flightStage,FLIGHT_LABELS,FLIGHT_SPEEDS} from './flight-replay.js';
 import {consoleMarkup,comparisonMarkup,DEFAULT_VARIABLES} from './experiment-console.js';
 import {get} from './api.js';
 import {esc,icon} from './charts.js';
@@ -25,7 +26,7 @@ export function assessmentMarkup(context){
 export function mountAssessment(context){
  const el=document.getElementById('assessment');if(!el)return {destroy(){}};
  const controller=new AbortController();const options={signal:controller.signal};
- let disposed=false,data=null,telemetry=null,selected='',selectedTask='',mapMode='overview',routeScope='all',filter='all',query='',minute=context.minute||0,playing=false,speed=4,timer=0,pending=0,ticket=0,lastError='',layers={facilities:true,links:true,formations:true,routes:true,labels:true};
+ let disposed=false,data=null,telemetry=null,selected='',selectedTask='',mapMode='overview',routeScope='all',filter='all',query='',minute=context.minute||0,playing=false,speed=.5,timer=0,pending=0,ticket=0,lastError='',layers={facilities:true,links:true,formations:true,routes:true,labels:true};
  const experimentOptions={
   weather:[['clear','晴朗'],['rain','降雨'],['wind','有风'],['fog','低能见度']],
   wind_kmh:[['5','5 km/h'],['8','8 km/h'],['15','15 km/h'],['25','25 km/h'],['40','40 km/h'],['55','55 km/h']],
@@ -47,7 +48,7 @@ export function mountAssessment(context){
 
  const $=q=>el.querySelector(q);
  const revealMission=()=>{if(!context.sharedMap||innerWidth<=1150)return;document.body.classList.remove('workspace-show-events','workspace-show-fleet','workspace-show-shipments');document.body.classList.add('workspace-show-inspector');document.querySelectorAll('[data-workspace-tool=inspector],[data-workspace-tool=events],[data-workspace-tool=fleet]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.workspaceTool==='inspector')));};
- const regional=false;speed=16;
+ const regional=false;let replayFrame=null,lastTick=0;
  const currentVehicle=()=>telemetry?.vehicles?.find(v=>v.vehicle_id===selected);
  const vehicleColor=id=>routeCatalog(context.plan).find(v=>v.id===id)?.color||'#8397a7';
  const selectedMission=()=>data?.timeline.find(t=>t.task_id===selectedTask);
@@ -71,8 +72,27 @@ export function mountAssessment(context){
  function trend(){
   const w=960,h=120,l=44,r=43,top=12,bottom=28,iw=w-l-r,ih=h-top-bottom,max=Math.max(1,data.total_tasks);
   const px=t=>l+t/maxTime()*iw,py=v=>top+(1-v/100)*ih;
-  const points=(key,isPct)=>data.trend.filter(p=>p[key]!=null).map(p=>`${px(p.minute)},${py(isPct?p[key]:p[key]/max*100)}`).join(' ');
-  return `<div class="trend-legend"><span><i style="background:#178e93"></i>已结束任务成功率 · 左轴</span><span><i style="background:#3779ce"></i>累计交付 · 右轴</span><span><i style="background:#db9043"></i>累计中断 · 右轴</span><small>成功率 = 交付 / 已结束任务</small></div><svg class="assessment-trend" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="按推演时间统计的已结束任务成功率、累计交付和中断数量；点击曲线定位时间" data-time-chart="true">${[0,25,50,75,100].map(v=>`<line x1="${l}" y1="${py(v)}" x2="${w-r}" y2="${py(v)}" stroke="#e6ecf2"/><text x="${l-9}" y="${py(v)+4}" text-anchor="end">${v}%</text><text x="${w-r+9}" y="${py(v)+4}">${fmt(max*v/100,0)}</text>`).join('')}${[0,1,2,3,4,5,6].map(i=>`<text x="${px(maxTime()*i/6)}" y="${h-6}" text-anchor="middle">T+${fmt(maxTime()*i/6,0)}</text>`).join('')}<polyline points="${points('success_pct',true)}" stroke="#178e93"/><polyline points="${points('delivered',false)}" stroke="#3779ce"/><polyline points="${points('failed',false)}" stroke="#db9043"/><line id="desk-trend-cursor" x1="${px(minute)}" x2="${px(minute)}" y1="${top}" y2="${h-bottom}" stroke="#e16258" stroke-dasharray="4 3"/><rect x="${l}" y="${top}" width="${iw}" height="${ih}" fill="transparent"/></svg>`;
+  const points=(key,isPct)=>trendPoints(key,isPct);
+  return `<div class="trend-legend"><span><i style="background:#178e93"></i>已结束任务成功率 · 左轴</span><span><i style="background:#3779ce"></i>累计交付 · 右轴</span><span><i style="background:#db9043"></i>累计中断 · 右轴</span><small>成功率 = 交付 / 已结束任务</small></div><svg class="assessment-trend" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="按推演时间统计的已结束任务成功率、累计交付和中断数量；点击曲线定位时间" data-time-chart="true">${[0,25,50,75,100].map(v=>`<line x1="${l}" y1="${py(v)}" x2="${w-r}" y2="${py(v)}" stroke="#e6ecf2"/><text x="${l-9}" y="${py(v)+4}" text-anchor="end">${v}%</text><text x="${w-r+9}" y="${py(v)+4}">${fmt(max*v/100,0)}</text>`).join('')}${[0,1,2,3,4,5,6].map(i=>`<text x="${px(maxTime()*i/6)}" y="${h-6}" text-anchor="middle">T+${fmt(maxTime()*i/6,0)}</text>`).join('')}<polyline data-trend="success_pct" points="${points('success_pct',true)}" stroke="#178e93"/><polyline data-trend="delivered" points="${points('delivered',false)}" stroke="#3779ce"/><polyline data-trend="failed" points="${points('failed',false)}" stroke="#db9043"/><line id="desk-trend-cursor" x1="${px(minute)}" x2="${px(minute)}" y1="${top}" y2="${h-bottom}" stroke="#e16258" stroke-dasharray="4 3"/><rect x="${l}" y="${top}" width="${iw}" height="${ih}" fill="transparent"/></svg>`;
+ }
+ function trendPoints(key,isPct){
+  const rows=data.trend.filter(p=>p.minute<=minute&&p[key]!=null),max=Math.max(1,data.total_tasks);
+  const xy=(at,value)=>`${44+at/maxTime()*873},${12+(1-(isPct?value:value/max*100)/100)*80}`;
+  return rows.flatMap((p,i)=>i?[xy(p.minute,rows[i-1][key]),xy(p.minute,p[key])]:[xy(p.minute,p[key])]).concat(rows.length?[xy(minute,rows.at(-1)[key])]:[]).join(' ');
+ }
+ function flightDeck(){return `<section class="flight-deck" aria-label="动态投送播放控制"><div class="flight-controls"><div class="flight-title"><i></i><span>动态投送<small>首次迭代 · 事件回放</small></span></div><button id="desk-play" data-desk="play" aria-label="开始动态投送" aria-pressed="false">▶ 开始演示</button><button data-desk="reset" title="回到起点并暂停">↺ 重置</button><label class="flight-speed">速度<select id="desk-speed" aria-label="回放速度">${FLIGHT_SPEEDS.map(v=>`<option value="${v}" ${v===speed?'selected':''}>${v}×${v===.5?' · 慢速':''}</option>`).join('')}</select></label><span class="flight-time"><b id="desk-time">T+0.0</b><span id="desk-time-end"></span></span><span id="flight-play-state" role="status">准备就绪</span></div><div class="flight-stage-counts" id="flight-stage-counts"></div></section>`;}
+ function syncPlayback(message=''){
+  el.classList.toggle('flight-is-playing',playing);
+  document.body.classList.toggle('flight-replay-active',playing);
+  const button=$('#desk-play');if(!button)return;
+  const ended=minute>=maxTime();button.textContent=playing?'Ⅱ 暂停演示':ended?'↻ 再次演示':minute>0?'▶ 继续演示':'▶ 开始演示';
+  button.setAttribute('aria-label',playing?'暂停动态投送':ended?'重新播放动态投送':'开始动态投送');button.setAttribute('aria-pressed',String(playing));
+  $('#flight-play-state').textContent=message||(playing?'正在播放':ended?'演示结束':minute>0?'已暂停':'准备就绪');
+ }
+ function updateFlightStages(){
+  const counts={waiting:0,takeoff:0,cruise:0,release:0,delivered:0,failed:0,unknown:0};
+  for(const v of telemetry.vehicles)if(v.task_count)counts[flightStage(v)]++;
+  $('#flight-stage-counts').innerHTML=Object.entries(counts).filter(([key,value])=>!['failed','unknown'].includes(key)||value).map(([key,value])=>`<span class="flight-phase ${key}"><i></i>${FLIGHT_LABELS[key]}<b>${value}</b></span>`).join('')+`<small>起飞 / 接近为进度分段 · 交付以事件为准</small>`;
  }
  function inspector(){
   const v=currentVehicle(),mission=selectedMission();
@@ -88,21 +108,25 @@ export function mountAssessment(context){
  function missionSummary(){
   const mission=selectedMission(),view=taskView();
   if(!mission||!view)return '<div class="mission-focus-empty">选择左侧任务，查看装载、空投与交付过程。</div>';
-  const stageIndex={pending:0,reposition:1,transport:2,delivered:3,failed:3,unknown:3}[view.stage];
-  const steps=[['等待派遣',mission.actual_start_min],['空投准备',view.pickupAt],['直达投送',mission.actual_end_min],['交付完成',mission.actual_end_min]];
+  const stage=view.stage==='unknown'?'unknown':flightStage({status:view.stage==='pending'?'standby':view.stage==='delivered'?'delivered':view.stage==='failed'?'failed':'in_transit',progress_pct:view.progress}),stageIndex={waiting:0,takeoff:1,cruise:2,release:3,delivered:4,failed:4,unknown:4}[stage];
+  const steps=['等待派遣','起飞爬升','途中飞行','空投接近','交付完成'].map(label=>[label]);
   const here=view.stage==='pending'?`等待 ${clock(mission.actual_start_min)} 派遣`:view.stage==='delivered'?`已送达 ${nodeName(mission.destination)}`:view.stage==='failed'?'任务已中断':view.stage==='unknown'?'缺少交付证据，等待确认':`${view.from?.name||'当前通道'} → ${view.next?.name||nodeName(mission.destination)}`;
-  return `<div class="mission-focus-heading"><div><span class="mission-focus-code">${safe(mission.code)}</span><strong>${safe(mission.cargo)}</strong><span class="mission-focus-platform">${safe(mission.vehicle_code)} · ${fmt(mission.weight_kg,0)} kg</span></div><span class="mission-phase-badge ${view.stage}">${safe(view.label)}</span></div>
+  return `<div class="mission-focus-heading"><div><span class="mission-focus-code">${safe(mission.code)}</span><strong>${safe(mission.cargo)}</strong><span class="mission-focus-platform">${safe(mission.vehicle_code)} · ${fmt(mission.weight_kg,0)} kg</span></div><span class="mission-phase-badge ${view.stage}">${safe(FLIGHT_LABELS[stage]||view.label)}</span></div>
    <div class="mission-endpoints"><div><i>取</i><span><small>装载区</small><b>${safe(nodeName(mission.origin))}</b></span></div><span class="mission-direction">→</span><div><i>送</i><span><small>接收区</small><b>${safe(nodeName(mission.destination))}</b></span></div></div>
-   <ol class="mission-stage-list">${steps.map(([label],i)=>`<li class="${i<stageIndex?'done':i===stageIndex?'current':''} ${i===1&&!view.hasReposition?'skipped':''}"><i>${i<stageIndex?'✓':i+1}</i><span>${i===1&&!view.hasReposition?'已在装载区':i===3&&view.stage==='failed'?'任务中断':i===3&&view.stage==='unknown'?'结果待确认':label}</span></li>`).join('')}</ol>
+   <ol class="mission-stage-list">${steps.map(([label],i)=>`<li class="${i<stageIndex?'done':i===stageIndex?'current':''} "><i>${i<stageIndex?'✓':i+1}</i><span>${i===4&&view.stage==='failed'?'任务中断':i===4&&view.stage==='unknown'?'结果待确认':label}</span></li>`).join('')}</ol>
    <div class="mission-route-progress"><span>${safe(here)}</span><b>路线 ${fmt(view.progress,0)}%</b><div><i style="width:${view.progress}%"></i></div></div>`;
  }
  function updateMission(){const target=$('#desk-mission-focus');if(target)target.innerHTML=missionSummary();el.querySelectorAll('[data-map-mode]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.mapMode===mapMode)));}
  function drawMap(){renderGeoMap(data.network,context.city,context.plan,{cities:context.cities,onCity:context.onCity,routes:true,routeScope,selectedShipment:data.tasks?.find(t=>t.id===selectedTask)?.shipment_id,historical:true,layers,telemetry,minute,run:context.run,selectedVehicle:selected,selectedTask,missionView:mapMode==='focus'?taskView():null,mapMode,animate:playing,formations:[],onSelectVehicle:selectVehicle,onSelectTask:selectTask,onRouteScope:scope=>{routeScope=scope;drawMap();}});}
  function selectTask(id){const row=data.timeline.find(t=>t.task_id===id);if(!row)return;selected=row.vehicle_id;selectedTask=id;revealMission();paintSelection();}
  function selectVehicle(id){selected=id;const current=data.timeline.find(t=>t.vehicle_id===id&&taskStatus(t)==='active')||data.timeline.find(t=>t.vehicle_id===id);selectedTask=current?.task_id||'';revealMission();paintSelection();}
- function paintSelection(){if(disposed||!data)return;$('#desk-inspector').innerHTML=inspector();$('#desk-fleet').innerHTML=fleet();$('#desk-schedule').innerHTML=timeline();updateMission();drawMap();}
+ function paintSelection(){if(disposed||!data)return;$('#desk-schedule').innerHTML=timeline();updateTime();mapCommand('fit');}
  function updateTime(){
-  if(!data)return;context.onMinute?.(minute);
+  if(!data)return;if(replayFrame)telemetry=replayFrame(minute);context.onMinute?.(minute);
+  $('#desk-active').textContent=telemetry.active_count;$('#desk-inspector').innerHTML=inspector();$('#desk-fleet').innerHTML=fleet();updateFlightStages();
+  $('#desk-connection').textContent=`事件回放 · ${clock(minute)}`;
+  el.querySelectorAll('[data-trend]').forEach(line=>line.setAttribute('points',trendPoints(line.dataset.trend,line.dataset.trend==='success_pct')));
+  for(const row of el.querySelectorAll('.schedule-row')){const task=data.timeline.find(t=>t.task_id===row.dataset.mission);if(!task)continue;const status=taskStatus(task);row.dataset.flightStatus=status;row.querySelector('.actual-bar').style.width=`${Math.max(0,xPos(Math.min(minute,task.replay_end_min))-xPos(task.actual_start_min))}%`;}
   const shipments=$('#desk-shipments');if(shipments)shipments.innerHTML=shipmentMarkup(shipmentView(data.tasks,data.timeline,minute),nodeName,selectedTask);
   updateMission();drawMap();
   $('#desk-time').textContent=clock(minute);$('#desk-time-end').textContent=`/ ${fmt(maxTime(),1)} min`;
@@ -128,15 +152,15 @@ export function mountAssessment(context){
    // A user seek invalidates stale paused frames. While playing, present the
    // latest available sample and request the current time on the next turn.
    if(!playing&&Math.abs(minute-at)>.05){telemetryQueued=true;return;}
-   telemetry=result;lastError='';
+   telemetry=replayFrame?replayFrame(minute):result;lastError='';
    $('#desk-connection').textContent=`仿真回放 · T+${Number(result.minute).toFixed(1)}`;
    $('#desk-connection').classList.remove('sync-error');
-   $('#desk-active').textContent=result.active_count;
+   $('#desk-active').textContent=telemetry.active_count;
    $('#desk-inspector').innerHTML=inspector();$('#desk-fleet').innerHTML=fleet();drawMap();
   }catch(error){
    if(disposed)return;
    lastError=error.message;playing=false;clearInterval(timer);
-   $('#desk-play').textContent='▶';$('#desk-play').setAttribute('aria-label','播放回放');
+   syncPlayback();
    $('#desk-connection').textContent='状态同步失败 · 点击重试';
    $('#desk-connection').classList.add('sync-error');
   }finally{
@@ -147,10 +171,14 @@ export function mountAssessment(context){
    }
   }
  }
- function seek(at){minute=Math.max(0,Math.min(maxTime(),Number(at)||0));playing=false;clearInterval(timer);$('#desk-play').textContent='▶';$('#desk-play').setAttribute('aria-label','播放回放');updateTime();clearTimeout(pending);pending=setTimeout(fetchTelemetry,100);}
+ function seek(at){minute=Math.max(0,Math.min(maxTime(),Number(at)||0));playing=false;clearInterval(timer);updateTime();syncPlayback();clearTimeout(pending);pending=setTimeout(fetchTelemetry,100);}
  function playback(){
-  if(playing){playing=false;clearInterval(timer);}else{if(minute>=maxTime())minute=0;playing=true;timer=setInterval(()=>{minute=Math.min(maxTime(),minute+speed*.5);updateTime();fetchTelemetry();if(minute>=maxTime()){playing=false;clearInterval(timer);$('#desk-play').textContent='▶';$('#desk-play').setAttribute('aria-label','播放回放');}},500);}
-  $('#desk-play').textContent=playing?'Ⅱ':'▶';$('#desk-play').setAttribute('aria-label',playing?'暂停回放':'播放回放');
+  if(playing){playing=false;clearInterval(timer);updateTime();syncPlayback();return;}
+  if(minute>=maxTime())minute=0;
+  clearTimeout(pending);playing=true;lastTick=performance.now();updateTime();syncPlayback();
+  timer=setInterval(()=>{const now=performance.now();minute=advanceFlightTime(minute,now-lastTick,speed,maxTime());lastTick=now;
+   if(minute>=maxTime()){playing=false;clearInterval(timer);}updateTime();syncPlayback();
+  },500);
  }
  function download(){
   if(!data)return;const cell=v=>{let s=String(v??'');if(/^[=+\-@]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"'};
@@ -164,10 +192,11 @@ export function mountAssessment(context){
  }
  function experimentRibbon(){return consoleMarkup(experimentVars,context.run?.seed??context.seed??2026,context.run?.iterations??context.iterations??80);}
  function labOptions(){return {seed:Number($('#lab-seed').value),iterations:Number($('#lab-iterations').value)};}
+ function collapseLab(collapsed){const ribbon=$('.experiment-console'),button=$('[data-desk="toggle-lab"]');ribbon.classList.toggle('lab-collapsed',collapsed);button.setAttribute('aria-expanded',String(!collapsed));button.textContent=collapsed?'展开变量':'收起变量';}
  function renderDesk(){
   const report=data.report,m=data.metrics;
   $('#desk-content').innerHTML=`<div class="desk-kpis"><div><span>${regional?'运输分段完成率':'当前任务完成率'}</span><b id="desk-completion">0%</b><small>首次迭代 / 全部任务 ${data.total_tasks} 项</small></div><div><span>累计交付 / 中断</span><b><em id="desk-delivered">0</em><i> / </i><em id="desk-failed">0</em><small>项</small></b><small>随回放时间同步累计</small></div><div><span>执行中无人机</span><b><em id="desk-active">${telemetry.active_count}</em><small> / ${telemetry.vehicles.length} 架</small></b><small>来自当前回放时刻</small></div><div><span>${regional?'运单平均交付率':'多轮平均成功率'}</span><b>${fmt(regional?m.shipment_success_pct:m.success_pct)}<small>%</small></b><small>${data.iterations} 轮 · 种子 ${data.seed??'—'}</small></div><div><span>${regional?'运单准点率':'多轮准点率'}</span><b>${fmt(regional?m.shipment_on_time_pct:m.on_time_pct)}<small>%</small></b><small>综合评分 ${fmt(m.score)} / 100</small></div></div>
-  <div class="desk-layout"><section class="desk-panel schedule-panel"><header><div><b>空投任务时序</b><small>AIRDROP MISSIONS</small></div><span class="panel-counter">${data.timeline.length} 项</span></header><div id="desk-schedule">${timeline()}</div></section>
+  ${flightDeck()}<div class="desk-layout"><section class="desk-panel schedule-panel"><header><div><b>空投任务时序</b><small>AIRDROP MISSIONS</small></div><span class="panel-counter">${data.timeline.length} 项</span></header><div id="desk-schedule">${timeline()}</div></section>
   <section class="desk-panel spatial-panel"><header><div><b>空投态势地图</b><small>MISSION ROUTE & PROGRESS</small></div><span class="live-badge"><i></i> 仿真回放</span></header><div class="mission-map-mode" role="group" aria-label="地图显示范围"><button type="button" data-map-mode="focus" aria-pressed="${mapMode==='focus'}">当前任务</button><button type="button" data-map-mode="overview" aria-pressed="${mapMode==='overview'}">全局态势</button><span>选择左侧任务可聚焦路线</span></div><div class="mission-focus" id="desk-mission-focus">${missionSummary()}</div><div class="desk-map-layers">${[['facilities','设施'],['links','通道'],['routes','路线'],['labels','标注']].map(([k,n])=>`<label><input type="checkbox" data-desk-layer="${k}" checked>${n}</label>`).join('')}<button data-desk="fit" title="适配当前显示范围">${icon('target',14)} 适配范围</button><button data-workspace-tool="legend" aria-expanded="false">路线图例</button></div>${context.sharedMap?'':geoMapMarkup()}<div class="map-status-strip mission-route-legend"><span><i class="route-key traveled"></i>已完成</span><span><i class="route-key remaining"></i>待完成</span><span><i class="route-key reposition"></i>装载准备</span><small>合成通道示意 · 非道路导航轨迹</small></div></section>
   <aside class="desk-panel inspector-panel"><header><div><b>无人机运行详情</b><small>PLATFORM INSPECTOR</small></div></header><div id="desk-inspector">${inspector()}</div></aside></div>
   <div class="desk-bottom"><section class="desk-panel trend-panel"><header><div><b>投送结果统计</b><small>DELIVERY RESULTS OVER TIME</small></div><span class="chart-hint">点击曲线可定位时间</span></header>${trend()}</section><section class="desk-panel fleet-panel"><header><div><b>空投机群</b><small>FLEET STATUS</small></div><span class="panel-counter">${telemetry.vehicles.length} 架</span></header><div id="desk-fleet">${fleet()}</div></section>${regional?`<aside class="desk-panel shipment-panel"><header><b>端到端运单</b><small>陆海接力 · 分段跟踪</small></header><div id="desk-shipments"></div></aside>`:''}</div>
@@ -175,25 +204,26 @@ export function mountAssessment(context){
   <div class="desk-event-strip"><div id="desk-event"></div><button id="desk-connection" data-desk="retry">回放数据已同步</button></div><div class="desk-methodology"><span>${icon('shield',13)} ${safe(data.statistics_note)}</span><span>1× = 1 仿真分钟 / 秒 · 航程、速度和载荷为推算值</span></div>
   ${report.totals.unassigned?`<div class="desk-notice">${report.totals.unassigned} 项任务未分配运力，已纳入完成率分母。请在空投方案中检查约束。</div>`:''}`;
   if(context.sharedMap){const focus=$('#desk-mission-focus');$('.inspector-panel').insertBefore(focus,$('#desk-inspector'));}
-  updateTime();
+  collapseLab(innerWidth<760);updateTime();syncPlayback();
   const ribbon=el.querySelector('.experiment-console');let lastHeight=0;
   const resize=new ResizeObserver(()=>{const h=Math.ceil(ribbon.getBoundingClientRect().height);if(h===lastHeight)return;lastHeight=h;document.body.style.setProperty('--lab-height',h+'px');if(data)mapCommand('fit');});resize.observe(ribbon);controller.signal.addEventListener('abort',()=>resize.disconnect(),{once:true});
  }
  async function load(){
   if(!context.run){$('#desk-content').innerHTML='<div class="desk-empty desk-empty-large"><span>◇</span><b>当前想定还没有仿真记录</b><p>先在联合投送方案中生成方案，再运行空投仿真。结果将自动出现在这里。</p><button class="button button-primary" data-desk="planning">前往空投方案 →</button></div>';return;}
-  try{const result=await get(`/simulations/${encodeURIComponent(context.run.id)}/assessment?minute=${minute.toFixed(3)}`);if(disposed)return;data=result;telemetry=result.telemetry;minute=minute?Math.min(minute,maxTime()):maxTime();selected=telemetry.vehicles.find(v=>v.task_count)?.vehicle_id||telemetry.vehicles[0]?.vehicle_id||'';selectedTask=data.timeline.find(t=>t.vehicle_id===selected)?.task_id||'';renderDesk();void fetchTelemetry();}
+  try{const result=await get(`/simulations/${encodeURIComponent(context.run.id)}/assessment?minute=${minute.toFixed(3)}`);if(disposed)return;data=result;telemetry=result.telemetry;minute=Math.min(Math.max(0,minute),maxTime());replayFrame=createFlightReplay(data);selected=telemetry.vehicles.find(v=>v.task_count)?.vehicle_id||telemetry.vehicles[0]?.vehicle_id||'';selectedTask=data.timeline.find(t=>t.vehicle_id===selected)?.task_id||'';renderDesk();void fetchTelemetry();}
   catch(error){if(!disposed)$('#desk-content').innerHTML=`<div class="desk-empty desk-empty-large"><b>评估数据加载失败</b><p>${safe(error.message)}</p><button class="button button-primary" data-desk="reload">重试加载</button></div>`;}
  }
  el.addEventListener('click',event=>{
   const eventJump=event.target.closest('[data-ops-seek]');if(eventJump){seek(eventJump.dataset.opsSeek);return;}
   if(event.target.closest('[data-ops-first-incident]')){const incident=data.events.find(e=>['warning','failed'].includes(e.kind));if(incident)seek(incident.at_min);return;}
-  const tab=event.target.closest('[data-lab-tab]');if(tab){el.querySelectorAll('[data-lab-tab]').forEach(b=>b.setAttribute('aria-selected',String(b===tab)));el.querySelectorAll('.lab-pane').forEach(p=>p.hidden=p.id!=='lab-pane-'+tab.dataset.labTab);return;}
+  const tab=event.target.closest('[data-lab-tab]');if(tab){collapseLab(false);el.querySelectorAll('[data-lab-tab]').forEach(b=>b.setAttribute('aria-selected',String(b===tab)));el.querySelectorAll('.lab-pane').forEach(p=>p.hidden=p.id!=='lab-pane-'+tab.dataset.labTab);return;}
   const shipment=event.target.closest('[data-shipment]');if(shipment){const first=data.tasks.filter(t=>t.shipment_id===shipment.dataset.shipment).sort((a,b)=>a.leg_index-b.leg_index)[0];if(first){selectedTask=first.id;selected=data.timeline.find(t=>t.task_id===first.id)?.vehicle_id||selected;mapMode='overview';routeScope='shipment';paintSelection();}return;}
   const mission=event.target.closest('[data-mission]');if(mission){const row=data.timeline.find(t=>t.task_id===mission.dataset.mission);selected=row.vehicle_id;selectedTask=row.task_id;mapMode='focus';revealMission();seek(row.actual_start_min);paintSelection();return;}
   const mapModeButton=event.target.closest('[data-map-mode]');if(mapModeButton){mapMode=mapModeButton.dataset.mapMode;if(mapMode==='focus')revealMission();updateMission();drawMap();return;}
   const vehicle=event.target.closest('[data-vehicle]');if(vehicle){selectVehicle(vehicle.dataset.vehicle);return;}
   const chart=event.target.closest('[data-time-chart]');if(chart){const bounds=chart.getBoundingClientRect();seek(((event.clientX-bounds.left)/bounds.width*960-44)/873*maxTime());return;}
   const action=event.target.closest('[data-desk]')?.dataset.desk;if(!action)return;
+  if(action==='toggle-lab'){collapseLab(!$('.experiment-console').classList.contains('lab-collapsed'));return;}
   if(['run-experiment','compare-fleet'].includes(action)){for(const input of [$('#lab-seed'),$('#lab-iterations')]){if(!input.checkValidity()){input.reportValidity();return;}}}
   if(action==='records'){context.onRecords?.();return;}
   if(action==='compare-fleet'){
@@ -231,7 +261,7 @@ export function mountAssessment(context){
  el.addEventListener('change',event=>{
   if(event.target.id==='assessment-run')context.onRun?.(event.target.value);
   if(event.target.id==='desk-filter'){filter=event.target.value;$('#desk-schedule').innerHTML=timeline();}
-  if(event.target.id==='desk-speed')speed=Number(event.target.value);
+  if(event.target.id==='desk-speed'){if(FLIGHT_SPEEDS.includes(Number(event.target.value)))speed=Number(event.target.value);lastTick=performance.now();}
   if(event.target.dataset.expVar){
    const key=event.target.dataset.expVar;
    if(experimentOptions[key]?.some(([value])=>value===event.target.value)){
@@ -243,7 +273,8 @@ export function mountAssessment(context){
  },options);
  window.addEventListener('keydown',event=>{if(event.key==='Escape'&&el.classList.contains('assessment-expanded')){el.classList.remove('assessment-expanded');document.body.classList.remove('desk-expanded-body');el.querySelector('[data-desk="fullscreen"]').setAttribute('aria-label','全屏评估工作台');drawMap();}},options);
  window.addEventListener('keydown',event=>{if(event.key==='Escape'&&document.body.classList.contains('map-immersive')){document.body.classList.remove('map-immersive');$('[data-desk="fullscreen"]').setAttribute('aria-label','全屏评估工作台');mapCommand('fit');}},options);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&playing){playing=false;clearInterval(timer);updateTime();syncPlayback('切换页面，已暂停');}},options);
  window.addEventListener('resize',()=>{if(data&&!disposed)drawMap();},options);
  load();
- return {destroy(){document.body.classList.remove('desk-expanded-body');disposed=true;ticket++;controller.abort();clearInterval(timer);clearTimeout(pending);}};
+ return {destroy(){document.body.classList.remove('desk-expanded-body','flight-replay-active');disposed=true;ticket++;controller.abort();clearInterval(timer);clearTimeout(pending);}};
 }

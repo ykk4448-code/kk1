@@ -32,6 +32,8 @@ jobs:
           node --check frontend/assets/assessment.js
           node --check frontend/assets/experiment-console.js
           node --test frontend/tests/test_experiment_console.mjs
+          node --check frontend/assets/flight-replay.js
+          node --test frontend/tests/test_flight_replay.mjs
           node --check frontend/assets/routes.js
           node --test frontend/tests/test_routes.mjs
           node --check frontend/assets/mission-view.js
@@ -50,7 +52,7 @@ jobs:
       - name: Validate mission console UI integration
         run: pytest frontend/tests/test_mission_console_contract.py frontend/tests/test_mission_v7_contract.py frontend/tests/test_civilian_airdrop_contract.py -q
       - name: Validate task route phases and recorded positions
-        run: pytest frontend/tests/test_mission_route_state.py -q
+        run: pytest frontend/tests/test_mission_route_state.py frontend/tests/test_flight_replay_projection.py -q
       - name: Validate cartographic theme and accessibility
         run: pytest frontend/tests/test_cartographic_theme.py -q
       - name: Validate light-blue theme and accessibility

@@ -329,7 +329,7 @@ async function createExperimentWithParameters(parameters,options={}){
  const record=await post('/experiments',{scenario_id:S.scenarioId,name,notes:options.notes||'由空投仿真实验变量栏启动。',strategy:options.strategy||S.strategy,algorithm:options.algorithm||S.algorithm,seed,iterations,parameters:params});
  S.seed=seed;S.iterations=iterations;await refresh();S.planId=record.plan_id;S.runId=record.run_id;S.playMinute=0;S.play=false;stopPlayback();
  S.report=await get('/simulations/'+encodeURIComponent(S.runId)+'/report');S.experiments=await get('/experiments?scenario_id='+encodeURIComponent(S.scenarioId)+'&limit=100');
- S.module='simulation';S.tabs.simulation=options.stayControl?'control':'experiments';if(options.stayControl)S.playMinute=Math.max(0,...(run()?.events||[]).map(e=>e.at_min));render();alertUser('实验已保存 '+record.id+' · 成功率 '+nfmt(record.results?.metrics?.success_pct,1)+'%');return record;
+ S.module='simulation';S.tabs.simulation=options.stayControl?'control':'experiments';render();alertUser('实验已保存 '+record.id+' · 成功率 '+nfmt(record.results?.metrics?.success_pct,1)+'%');return record;
 }
 function setPage(id){if(id!=='home'&&!allowedModule(id))return;S.module=id;S.search='';S.play=false;stopPlayback();writeRoute();render();if(id==='simulation')loadTelemetry();window.scrollTo({top:0,behavior:'instant'});}
 function stopPlayback(){clearInterval(S.interval);S.interval=0;}

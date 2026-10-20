@@ -3,6 +3,7 @@ import {esc} from './charts.js';
 import {routeCatalog,routeSegments} from './routes.js';
 import {CHINA_MAP,CITY_MAPS} from './map-data.js';
 import {geoProject,geoUnproject,fitGeographic} from './map-math.js';
+import {flightStage,FLIGHT_LABELS} from './flight-replay.js';
 
 const mercator=geoProject,inverse=geoUnproject;
 let camera={key:'',center:[35,104],zoom:4,basemap:'streets'},saved=null;
@@ -25,6 +26,8 @@ export function renderGeoMap(network,city,plan,opts={}){
  if(camera.city!==city?.id){camera.city=city?.id;camera.basemap=city?.id==='national'?'vector':'streets';}
  const w=el.clientWidth||innerWidth,h=el.clientHeight||innerHeight,padding=mapPadding(w,h,opts);
  const labHeight=document.querySelector('.experiment-console')?.getBoundingClientRect().height||0;if(labHeight)padding.bottom=Math.max(padding.bottom,labHeight+95);
+ const flightDeck=document.querySelector('.flight-deck');if(flightDeck)padding.top=Math.max(padding.top,flightDeck.getBoundingClientRect().bottom+20);
+ if(w>1150)for(const selector of ['.desk-map-layers','.trend-panel']){const panel=document.querySelector(selector);if(panel&&getComputedStyle(panel).display!=='none')padding.bottom=Math.max(padding.bottom,h-panel.getBoundingClientRect().top+12);}
  const cx=(padding.left+w-padding.right)/2,cy=(padding.top+h-padding.bottom)/2;
  function fit(national=false){
   if(national||opts.home){const fitted=fitGeographic([{lat:3,lon:73},{lat:54,lon:135}],w,h,padding);camera.center=fitted.center;camera.zoom=fitted.zoom;return;}
@@ -88,6 +91,15 @@ export function renderGeoMap(network,city,plan,opts={}){
   }
  }
  const positions=opts.telemetry?.vehicles||[];
+ const dropGlyph='<g class="geo-drop-marker" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M-8 24a8 8 0 0 1 16 0Z M-8 24l6 9M8 24l-6 9M0 24v9"/><rect x="-3" y="33" width="6" height="5" rx="1" fill="#fff"/></g>';
+ // Actual traversed portion of each flight, from the same snapshot clock.
+ if(!focus&&visible('routes'))for(const v of positions){
+  if(v.status!=='in_transit')continue;
+  const task=plan?.assignment_data?.find(a=>a.task_id===v.task_id),origin=byId[task?.origin];
+  if(!origin)continue;
+  const p=point(origin),q=point(v),color=catalog.find(c=>c.id===v.vehicle_id)?.color||'#367ba1';
+  routeMarkup+=`<line class="geo-flight-trail" x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="${color}" stroke-width="4" stroke-opacity=".55"/>`;
+ }
  const selectedVehicle=positions.find(v=>v.vehicle_id===opts.selectedVehicle);
  const actorPosition=view?view.position:selectedVehicle;
  const hasActor=actorPosition&&(geographic?Number.isFinite(actorPosition.lat)&&Number.isFinite(actorPosition.lon):Number.isFinite(actorPosition.x)&&Number.isFinite(actorPosition.y));
@@ -118,12 +130,12 @@ export function renderGeoMap(network,city,plan,opts={}){
   if(shipmentVehicles.size&&!shipmentVehicles.has(v.vehicle_id))continue;
   if(v.vehicle_id===opts.selectedVehicle&&hasActor)continue;
   if((geographic&&(!Number.isFinite(v.lat)||!Number.isFinite(v.lon)))||(!geographic&&(!Number.isFinite(v.x)||!Number.isFinite(v.y))))continue;
-  const [x,y]=point(v),key=`${Math.round(x/22)}:${Math.round(y/22)}`;
+  const [x,y]=point(v),key=v.status==='in_transit'?v.vehicle_id:`${Math.round(x/22)}:${Math.round(y/22)}`;
   if(!groups.has(key))groups.set(key,{x,y,vehicles:[]});groups.get(key).vehicles.push(v);
  }
  for(const group of groups.values()){
-  const {x,y,vehicles}=group,v=vehicles[0],c=vehicles.some(v=>v.status==='failed')?'#b55148':'#557f98';
-  moving+=`<g class="geo-moving geo-other-vehicle" data-replay-vehicle="${esc(v.vehicle_id)}" role="button" tabindex="0" aria-label="查看平台 ${esc(v.code)}${vehicles.length>1?'，此处共 '+vehicles.length+' 台平台':''}" transform="translate(${x} ${y})"><title>${vehicles.map(v=>esc(v.code)+' · '+esc(v.mission_code||'待命')).join(' / ')}</title><circle r="13" fill="#fff" stroke="${c}" stroke-width="1.5"/>${vehicles.length>1?`<text y="5" text-anchor="middle" class="geo-cluster-count">${vehicles.length}</text>`:`<g fill="none" stroke="${c}" stroke-width="1.4">${glyph(v)}</g>`}</g>`;
+  const {x,y,vehicles}=group,v=vehicles[0],stage=flightStage(v),c=vehicles.some(v=>v.status==='failed')?'#b55148':catalog.find(c=>c.id===v.vehicle_id)?.color||'#557f98';
+  moving+=`<g class="geo-moving geo-other-vehicle flight-${stage}" data-replay-vehicle="${esc(v.vehicle_id)}" data-fleet-key="${esc(v.vehicle_id)}" data-active="${v.status==='in_transit'}" data-x="${x}" data-y="${y}" role="button" tabindex="0" aria-label="查看平台 ${esc(v.code)}${vehicles.length>1?'，此处共 '+vehicles.length+' 台平台':''}"><title>${vehicles.map(v=>esc(v.code)+' · '+FLIGHT_LABELS[flightStage(v)]).join(' / ')}</title><circle r="13" fill="#fff" stroke="${c}" stroke-width="1.5"/>${vehicles.length>1?`<text y="5" text-anchor="middle" class="geo-cluster-count">${vehicles.length}</text>`:`<g fill="none" stroke="${c}" stroke-width="1.4">${glyph(v)}</g>${stage==='release'?dropGlyph:''}`}</g>`;
  }
  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
  // Keep the selected actor connected to the SVG so its position interpolates smoothly.
@@ -131,16 +143,34 @@ export function renderGeoMap(network,city,plan,opts={}){
  svg.querySelector('[data-map-layer="network"]').innerHTML=(!geographic&&showNetwork?`<rect class="geo-legacy-frame" x="${legacy.x}" y="${legacy.y}" width="${legacy.w}" height="${legacy.h}" rx="12"/><text class="geo-legacy-title" x="${legacy.x+16}" y="${legacy.y+25}">相对位置示意</text>`:'')+edgeMarkup;
  svg.querySelector('[data-map-layer="route"]').innerHTML=routeMarkup;
  svg.querySelector('[data-map-layer="nodes"]').innerHTML=nodeMarkup;
- svg.querySelector('[data-map-layer="fleet"]').innerHTML=units+moving;
+ const fleetLayer=svg.querySelector('[data-map-layer="fleet"]');
+ if(!fleetLayer.querySelector('[data-fleet-units]'))fleetLayer.innerHTML='<g data-fleet-units></g><g data-fleet-actors></g>';
+ fleetLayer.querySelector('[data-fleet-units]').innerHTML=units;
+ const fleetActors=fleetLayer.querySelector('[data-fleet-actors]'),templates=document.createElementNS('http://www.w3.org/2000/svg','g');templates.innerHTML=moving;
+ if(!fleetActors.querySelector('[data-airborne]'))fleetActors.innerHTML='<g data-idle-fleet></g><g data-airborne></g>';
+ const oldActors=new Map([...fleetActors.querySelectorAll('[data-fleet-key]')].map(n=>[n.dataset.fleetKey,n]));
+ const projection=[key,camera.zoom,Math.round(left),Math.round(top)].join(':');
+ for(const template of [...templates.children]){
+  const id=template.dataset.fleetKey;let actor=oldActors.get(id);oldActors.delete(id);
+  if(!actor){actor=template;}else{
+   if(actor.innerHTML!==template.innerHTML)actor.innerHTML=template.innerHTML;
+   actor.setAttribute('class',template.getAttribute('class'));actor.setAttribute('aria-label',template.getAttribute('aria-label'));
+  }
+  const bucket=fleetActors.querySelector(template.dataset.active==='true'?'[data-airborne]':'[data-idle-fleet]');if(actor.parentNode!==bucket)bucket.append(actor);
+  actor.style.transition=opts.animate&&actor.dataset.projection===projection?'transform 500ms linear':'none';
+  actor.style.transform=`translate(${template.dataset.x}px,${template.dataset.y}px)`;actor.dataset.projection=projection;
+ }
+ for(const actor of oldActors.values())actor.remove();
  const actorLayer=svg.querySelector('[data-map-layer="actor"]');
  if(showNetwork&&hasActor&&selectedVehicle){
-  const [x,y]=actorPoint,c=view?.stage==='failed'?'#b55148':view?.stage==='delivered'?'#277768':'#245b85';
+  const [x,y]=actorPoint,c=selectedVehicle.status==='failed'?'#b55148':selectedVehicle.status==='delivered'?'#277768':'#245b85';
   let actor=actorLayer.firstElementChild;
   if(!actor||actor.dataset.replayVehicle!==selectedVehicle.vehicle_id){actorLayer.innerHTML=`<g class="geo-moving is-selected" data-replay-vehicle="${esc(selectedVehicle.vehicle_id)}" role="button" tabindex="0" aria-label="查看平台 ${esc(selectedVehicle.code)}"></g>`;actor=actorLayer.firstElementChild;}
   const plateWidth=Math.max(96,labelWidth(selectedVehicle.code)),plateX=x+plateWidth+35<w?25:-plateWidth-25;
-  actor.innerHTML=`<title>${esc(selectedVehicle.code)} · ${esc(view?.label||selectedVehicle.status)}</title><circle r="25" fill="${c}" fill-opacity=".13"/><circle r="17" fill="#fff" stroke="${c}" stroke-width="3"/><g fill="none" stroke="${c}" stroke-width="1.7">${glyph(selectedVehicle)}</g><rect x="${plateX}" y="-14" width="${plateWidth}" height="28" rx="4" fill="${c}"/><text class="geo-actor-label" x="${plateX+plateWidth/2}" y="5" text-anchor="middle">${esc(selectedVehicle.code)}</text>`;
-  const projection=[key,camera.zoom,Math.round(left),Math.round(top)].join(':');
-  actor.style.transition=opts.animate&&actor.dataset.projection===projection?'transform 460ms linear':'none';
+  const stage=flightStage(selectedVehicle);actor.dataset.flightStage=stage;
+  const actorMarkup=`<title>${esc(selectedVehicle.code)} · ${FLIGHT_LABELS[stage]}</title><circle r="25" fill="${c}" fill-opacity=".13"/><circle r="17" fill="#fff" stroke="${c}" stroke-width="3"/><g fill="none" stroke="${c}" stroke-width="1.7">${glyph(selectedVehicle)}</g>${stage==='release'?dropGlyph:''}<rect x="${plateX}" y="-14" width="${plateWidth}" height="28" rx="4" fill="${c}"/><text class="geo-actor-label" x="${plateX+plateWidth/2}" y="5" text-anchor="middle">${esc(selectedVehicle.code)}</text><text class="geo-flight-label" x="${plateX+plateWidth/2}" y="31" text-anchor="middle">${FLIGHT_LABELS[stage]}</text>`;
+  if(actor._flightMarkup!==actorMarkup){actor.innerHTML=actorMarkup;actor._flightMarkup=actorMarkup;}
+  actor.style.transition=opts.animate&&actor.dataset.projection===projection?'transform 500ms linear':'none';
   actor.dataset.projection=projection;actor.style.transform=`translate(${x}px,${y}px)`;
  }else actorLayer.innerHTML='';
  el.querySelector('#geo-city-name').textContent=geographic?`${city?.name||'方案快照'} · 行动区域`:`${opts.historical?'方案快照':city?.name||'演示区'} · 合成路网`;

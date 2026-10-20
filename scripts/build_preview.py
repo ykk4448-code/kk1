@@ -93,7 +93,7 @@ html=html.replace('<link rel="stylesheet" href="/assets/map-workspace.css">','<s
 # Frontend sources are ES modules. In preview only, flatten imports and exports
 # into one classic script. This is a read-only rendering snapshot, not product code.
 chunks=[]
-for name in ['api.js','charts.js','mission-view.js','routes.js','map-data.js','map-math.js','map.js','workspace.js','shipment-view.js','experiment-console.js','assessment.js','app.js']:
+for name in ['api.js','charts.js','mission-view.js','routes.js','map-data.js','map-math.js','map.js','workspace.js','shipment-view.js','experiment-console.js','flight-replay.js','assessment.js','app.js']:
     js=(ROOT/'frontend/assets'/name).read_text(encoding='utf-8')
     if name=='api.js':
         # A snapshot client has no authentication flow, token, or write access.
