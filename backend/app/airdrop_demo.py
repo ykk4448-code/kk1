@@ -131,6 +131,7 @@ def seed_civil_airdrop_demo(db: Session):
         name='基线实验 · 默认环境', notes='系统预置的可复现实验记录。参数为教学假设，结果仅用于软件验证。',
         parameters=params_snapshot,
         results={'metrics':execution['metrics'],'plan_summary':planned['summary'],
+                 'strategy':'balanced','algorithm':'astar','model_version':EXPERIMENT_MODEL_VERSION,
                  'seed':20261020,'iterations':80,'sample_count':len(execution['samples']),
                  'run_id':run.id,'plan_id':plan.id},
         model_version=EXPERIMENT_MODEL_VERSION, created_by='system'))
