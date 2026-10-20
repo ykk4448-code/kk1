@@ -58,7 +58,7 @@ def test_five_entries_remain_separate_from_secondary_tabs():
     assert "function home()" in APP
     assert 'class="landing-modules"' in APP
     assert "current.tabs.map" in APP
-    for title in ("基础数据", "想定管理", "联合投送方案", "行动推演", "评估分析"):
+    for title in ("空投资源", "应急场景", "空投方案", "空投仿真", "实验评估"):
         assert title in APP
 
 
