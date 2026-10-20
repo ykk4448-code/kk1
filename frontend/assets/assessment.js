@@ -16,7 +16,7 @@ export function assessmentMarkup(context){
   <div class="assessment-toolbar"><div class="desk-title"><span class="desk-symbol">${icon('chart',19)}</span><div><strong>任务综合评估工作台</strong><small>时序 · 空间 · 运力 · 结果同步分析</small></div></div>
    <div class="desk-actions"><label>推演记录<select id="assessment-run" aria-label="选择评估运行">${runs.map(r=>`<option value="${safe(r.id)}" ${r.id===context.run?.id?'selected':''}>${safe(r.id)} · ${r.iterations} 轮</option>`).join('')||'<option>暂无推演记录</option>'}</select></label><button class="button button-light" data-desk="csv" ${runs.length?'':'disabled'}>${icon('download',15)} 导出结果</button><button class="icon-button" data-desk="fullscreen" aria-label="全屏评估工作台" title="全屏评估工作台">⛶</button></div>
   </div>
-  ${context.denseScenario&&context.scenarioId!==context.denseScenario.id?`<div class="desk-data-note"><span>历史相对坐标快照 · ${context.plan?.snapshot_data?.nodes?.length||0} 设施 / ${context.plan?.snapshot_data?.edges?.length||0} 通道</span><button data-desk="dense">切换真实地理场景 →</button></div>`:''}
+  ${context.denseScenario&&context.scenarioId!==context.denseScenario.id?`<div class="desk-data-note"><span>历史相对坐标快照 · ${context.plan?.snapshot_data?.nodes?.length||0} 设施 / ${context.plan?.snapshot_data?.edges?.length||0} 通道</span><button data-desk="dense">查看合成 XY 示意 →</button></div>`:''}
   <div id="desk-content"><div class="desk-loading" role="status"><span class="loading-spinner"></span>正在读取任务快照与推演证据…</div></div>
  </section>`;
 }
@@ -185,12 +185,12 @@ export function mountAssessment(context){
   <div class="desk-bottom"><section class="desk-panel trend-panel"><header><div><b>投送结果统计</b><small>DELIVERY RESULTS OVER TIME</small></div><span class="chart-hint">点击曲线可定位时间</span></header>${trend()}</section><section class="desk-panel fleet-panel"><header><div><b>参演平台</b><small>FLEET STATUS</small></div><span class="panel-counter">${telemetry.vehicles.length} 台</span></header><div id="desk-fleet">${fleet()}</div></section>${regional?`<aside class="desk-panel shipment-panel"><header><b>端到端运单</b><small>陆海接力 · 分段跟踪</small></header><div id="desk-shipments"></div></aside>`:''}</div>
   ${experimentRibbon()}
   <div class="desk-event-strip"><div id="desk-event"></div><button id="desk-connection" data-desk="retry">回放数据已同步</button></div><div class="desk-methodology"><span>${icon('shield',13)} ${safe(data.statistics_note)}</span><span>1× = 1 仿真分钟 / 秒 · 航程、速度和载荷为推算值</span></div>
-  ${report.totals.unassigned?`<div class="desk-notice">${report.totals.unassigned} 项任务未分配运力，已纳入完成率分母。请在联合投送方案中检查约束。</div>`:''}`;
+  ${report.totals.unassigned?`<div class="desk-notice">${report.totals.unassigned} 项任务未分配运力，已纳入完成率分母。请在空投方案中检查约束。</div>`:''}`;
   if(context.sharedMap){const focus=$('#desk-mission-focus');$('.inspector-panel').insertBefore(focus,$('#desk-inspector'));}
   updateTime();
  }
  async function load(){
-  if(!context.run){$('#desk-content').innerHTML='<div class="desk-empty desk-empty-large"><span>◇</span><b>当前想定还没有推演记录</b><p>先在联合投送方案中生成方案，再运行行动推演。结果将自动出现在这里。</p><button class="button button-primary" data-desk="planning">前往方案规划 →</button></div>';return;}
+  if(!context.run){$('#desk-content').innerHTML='<div class="desk-empty desk-empty-large"><span>◇</span><b>当前想定还没有仿真记录</b><p>先在联合投送方案中生成方案，再运行空投仿真。结果将自动出现在这里。</p><button class="button button-primary" data-desk="planning">前往空投方案 →</button></div>';return;}
   try{const result=await get(`/simulations/${encodeURIComponent(context.run.id)}/assessment?minute=${minute.toFixed(3)}`);if(disposed)return;data=result;telemetry=result.telemetry;minute=Math.min(minute,maxTime());selected=telemetry.vehicles.find(v=>v.task_count)?.vehicle_id||telemetry.vehicles[0]?.vehicle_id||'';selectedTask=data.timeline.find(t=>t.vehicle_id===selected)?.task_id||'';renderDesk();}
   catch(error){if(!disposed)$('#desk-content').innerHTML=`<div class="desk-empty desk-empty-large"><b>评估数据加载失败</b><p>${safe(error.message)}</p><button class="button button-primary" data-desk="reload">重试加载</button></div>`;}
  }
