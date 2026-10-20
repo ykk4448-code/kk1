@@ -287,7 +287,7 @@ function newTask(task){
  const destinations=airdrop?nodes.filter(n=>n.id.startsWith('AIR-ISLE-')):nodes.slice().reverse();
  const fields=input('投送物资','cargo','maxlength="90" value="'+txt(task?.cargo||'')+'" placeholder="应急医疗物资"')
   +'<div class="form-pair">'+input('物资重量 kg','weight_kg','type="number" min="0.1" max="5000" step="0.1" value="'+(task?.weight_kg||25)+'"')
-  +input('截止时长 min','deadline_min','type="number" min="1" max="43200" value="'+(task?.deadline_min||150)+'')+'</div>'
+  +input('截止时长 min','deadline_min','type="number" min="1" max="43200" value="'+(task?.deadline_min||150)+'"')+'</div>'
   +(isEdit?'':select('大陆侧补给点','origin',origins)+select('台湾侧接收点','destination',destinations)
     +select('投送方式','transport_mode',airdrop?[['airdrop','无人机空投']]:[['road','归档陆运'],['sea','归档海运']]))
   +select('紧急优先级','priority',[['1','P1 · 紧急'],['2','P2 · 常规'],['3','P3 · 低优先级']])
