@@ -27,15 +27,15 @@ export function mountAssessment(context){
  let disposed=false,data=null,telemetry=null,selected='',selectedTask='',mapMode='overview',routeScope='all',filter='all',query='',minute=context.minute||0,playing=false,speed=4,timer=0,pending=0,ticket=0,lastError='',layers={facilities:true,links:true,formations:true,routes:true,labels:true};
  const experimentOptions={
   weather:[['clear','晴朗'],['rain','降雨'],['wind','有风'],['fog','低能见度']],
-  wind:[['calm','微风'],['moderate','中等'],['strong','较强']],
+  wind_kmh:[['5','5 km/h'],['8','8 km/h'],['15','15 km/h'],['25','25 km/h'],['40','40 km/h'],['55','55 km/h']],
   rain:[['none','无降雨'],['light','小雨'],['moderate','中雨']],
-  cloud:[['high','较高'],['medium','中等'],['low','较低']],
-  sea:[['calm','平稳'],['moderate','轻浪'],['rough','较大涌浪']],
-  payload:[['light','轻载'],['standard','标准载荷'],['medical','医疗物资']],
-  altitude:[['conservative','保守'],['standard','标准'],['high','较高']],
-  reserve:[['20','20%'],['30','30%'],['40','40%']]
+  cloud_base:[['high','较高'],['medium','中等'],['low','较低']],
+  sea_state:[['calm','平稳'],['moderate','中等'],['rough','较大涌浪']],
+  payload_profile:[['light','轻载物资'],['standard','标准物资'],['medical','医疗物资']],
+  altitude_profile:[['conservative','保守'],['standard','标准'],['high','较高']],
+  battery_reserve_pct:[['20','20%'],['30','30%'],['40','40%']]
  };
- const experimentVars={weather:'clear',wind:'calm',rain:'none',cloud:'high',sea:'calm',payload:'standard',altitude:'conservative',reserve:'30'};
+ const experimentVars={weather:'clear',wind_kmh:'8',rain:'none',cloud_base:'high',sea_state:'calm',payload_profile:'standard',altitude_profile:'standard',battery_reserve_pct:'30'};
  try{
   const saved=JSON.parse(localStorage.getItem('aether-civil-airdrop-experiment-v1')||'null');
   if(saved&&typeof saved==='object')for(const key of Object.keys(experimentOptions)){
@@ -168,11 +168,11 @@ export function mountAssessment(context){
      <label class="speed-label">回放速度<select id="desk-speed" aria-label="回放速度">${(regional?[1,4,16,64,128,256,1024]:[1,4,16]).map(value=>`<option value="${value}" ${value===speed?'selected':''}>${value}×</option>`).join('')}</select></label>
      <button class="player-step" data-desk="reset" aria-label="重置回放" title="重置回放">↺</button>
     </div>
-    <div id="desk-experiment-status" class="experiment-ribbon-status" aria-live="polite">变量仅保存为本地预设，不改写历史推演。</div>
+    <div id="desk-experiment-status" class="experiment-ribbon-status" aria-live="polite">变量可保存为本地预设；运行后会创建独立实验记录。</div>
    </div>
    <div class="experiment-ribbon-controls">
-    ${experimentSelect('weather','天气')}${experimentSelect('wind','风场')}${experimentSelect('rain','降雨')}${experimentSelect('cloud','云底')}${experimentSelect('sea','海况')}${experimentSelect('payload','载荷')}${experimentSelect('altitude','飞行高度')}${experimentSelect('reserve','电量余量')}
-    <button class="button button-primary experiment-save" data-desk="apply-experiment">保存变量预设</button>
+    ${experimentSelect('weather','天气')}${experimentSelect('wind_kmh','风速')}${experimentSelect('rain','降雨')}${experimentSelect('cloud_base','云底')}${experimentSelect('sea_state','海况')}${experimentSelect('payload_profile','载荷')}${experimentSelect('altitude_profile','飞行剖面')}${experimentSelect('battery_reserve_pct','电量余量')}
+    <button class="button button-ghost experiment-save" data-desk="apply-experiment">保存预设</button><button class="button button-primary experiment-save" data-desk="run-experiment">运行并记录</button>
    </div>
   </div>`;
  }
@@ -209,6 +209,12 @@ export function mountAssessment(context){
    catch{if(status)status.textContent='浏览器未允许本地保存，请检查隐私设置。';}
    return;
   }
+  if(action==='run-experiment'){
+   const status=$('#desk-experiment-status');if(status)status.textContent='正在运行实验并保存记录…';
+   const params={...experimentVars,wind_kmh:Number(experimentVars.wind_kmh),battery_reserve_pct:Number(experimentVars.battery_reserve_pct)};
+   Promise.resolve(context.onExperiment?.(params)).then(()=>{if(status){status.textContent='实验运行完成；记录已提交。';status.classList.add('is-saved');}}).catch(error=>{if(status)status.textContent='实验未完成：'+(error?.message||'请求失败');});
+   return;
+  }
   if(action==='previous')seek([...data.events].reverse().find(e=>e.at_min<minute-.01)?.at_min||0);
   if(action==='next')seek(data.events.find(e=>e.at_min>minute+.01)?.at_min??maxTime());
   if(action==='retry'){if(lastError)fetchTelemetry();}if(action==='reload')load();if(action==='planning')context.onPlanning?.();
@@ -228,7 +234,7 @@ export function mountAssessment(context){
    const key=event.target.dataset.expVar;
    if(experimentOptions[key]?.some(([value])=>value===event.target.value)){
     experimentVars[key]=event.target.value;
-    const status=$('#desk-experiment-status');if(status){status.textContent='变量已修改，保存后可在本浏览器复用。';status.classList.remove('is-saved');}
+    const status=$('#desk-experiment-status');if(status){status.textContent='变量已修改；点击运行并记录可创建新实验。';status.classList.remove('is-saved');}
    }
   }
   if(event.target.dataset.deskLayer){layers[event.target.dataset.deskLayer]=event.target.checked;drawMap();}
