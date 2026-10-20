@@ -52,7 +52,8 @@ def seed_civil_airdrop_demo(db: Session):
     # Preserve historical scenarios/runs for audit, but take legacy land/sea
     # networks out of the active civilian product surface.
     for old in db.scalars(select(m.Scenario)).all():
-        if old.id != SCENARIO_ID:
+        # Archive legacy networks once, but never archive user-created civil-airdrop scenarios.
+        if old.network_id != NETWORK_ID:
             old.status = 'archived'
     scene = db.get(m.Scenario, SCENARIO_ID)
     if scene is not None:
