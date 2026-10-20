@@ -30,7 +30,7 @@ def test_experiment_controls_create_and_export_server_records():
     assert "view-experiment" in APP and "export-experiment" in APP
     assert "模型因子：时长" in APP and "duration_factor" in APP
     assert 'data-desk="run-experiment"' in ASSESSMENT
-    assert "context.onExperiment?.(params)" in ASSESSMENT
+    assert "context.onExperiment(params)" in ASSESSMENT
     assert "model_factors" in SEED or "parameter_summary" in SEED
     assert "f'/experiments?scenario_id={sid}&limit=100'" in PREVIEW
 
