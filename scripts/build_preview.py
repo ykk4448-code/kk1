@@ -165,12 +165,16 @@ html=html.replace('<link rel="stylesheet" href="/assets/map-comfort.css">','<sty
 html=html.replace('<link rel="stylesheet" href="/assets/regional.css">','<style>'+(ROOT/'frontend/assets/regional.css').read_text(encoding='utf-8')+'</style>')
 html=html.replace('<link rel="stylesheet" href="/assets/platform.css">','<style>'+(ROOT/'frontend/assets/platform.css').read_text(encoding='utf-8')+'</style>')
 html=html.replace('<link rel="stylesheet" href="/assets/airdrop-lab.css">','<style>'+(ROOT/'frontend/assets/airdrop-lab.css').read_text(encoding='utf-8')+'</style>')
+html=html.replace('<link rel="stylesheet" href="/assets/aviation-home.css">','<style>'+(ROOT/'frontend/assets/aviation-home.css').read_text(encoding='utf-8')+'</style>')
 js=prelude+'\n'+'\n'.join(chunks)
 html=html.replace('<script type="module" src="/assets/app.js"></script>','<script>'+js+'</script>')
 mission_js=(ROOT/'frontend/assets/mission-v7.js').read_text(encoding='utf-8').replace("import {get} from './api.js';",'').replace('export function ','function ')
 mission_js='(function(){\n'+mission_js+'\n})();'  # Keep module-local names such as safe/cache isolated.
 html=html.replace('<script type="module" src="/assets/mission-v7.js"></script>','<script>'+mission_js+'</script>')
 html=html.replace('<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">','')
+# Keep the generated aviation artwork available in the standalone offline preview.
+hero_uri='data:image/webp;base64,'+base64.b64encode((ROOT/'frontend/assets/aviation-hero.webp').read_bytes()).decode('ascii')
+html=html.replace('/assets/aviation-hero.webp',hero_uri)
 out=ROOT/'preview.html'
 out.write_text(html,encoding='utf-8')
 print(f'Wrote {out} ({out.stat().st_size/1024:.1f} KB)')

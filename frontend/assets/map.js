@@ -173,9 +173,9 @@ export function renderGeoMap(network,city,plan,opts={}){
   actor.style.transition=opts.animate&&actor.dataset.projection===projection?'transform 500ms linear':'none';
   actor.dataset.projection=projection;actor.style.transform=`translate(${x}px,${y}px)`;
  }else actorLayer.innerHTML='';
- el.querySelector('#geo-city-name').textContent=geographic?`${city?.name||'方案快照'} · 行动区域`:`${opts.historical?'方案快照':city?.name||'演示区'} · 合成路网`;
+ el.querySelector('#geo-city-name').textContent=geographic?`${city?.name||'方案快照'} · 行动区域`:`${opts.historical?'方案快照':city?.name||'演示区'} · 任务路网`;
  el.querySelector('#geo-system').textContent=geographic?'区域参考':opts.home?'中国全图':'SYNTHETIC XY';
- el.querySelector('#geo-coords').textContent=geographic?`${camera.center[0].toFixed(4)}°N, ${camera.center[1].toFixed(4)}°E · Z${camera.zoom}`:'相对坐标网格 · 不代表真实地理位置';
+ el.querySelector('#geo-coords').textContent=geographic?`${camera.center[0].toFixed(4)}°N, ${camera.center[1].toFixed(4)}°E · Z${camera.zoom}`:'相对坐标网格';
  el.querySelector('.geo-attribution').hidden=false;
  saved={network,city,plan,opts};
  const redraw=()=>renderGeoMap(saved.network,saved.city,saved.plan,saved.opts);

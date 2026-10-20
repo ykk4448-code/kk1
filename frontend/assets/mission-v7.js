@@ -51,7 +51,7 @@ function eventStats(events){const issues=events.filter(e=>e.kind==='failed'||e.k
 function scaffold(data){
  const duration=Math.max(1,Number(data.duration_min)||1),evs=normalizedEvents(data);
  return `<section class="ops-v7-header" aria-label="回放事件导航">
-    <div class="ops-v7-heading"><div><small>SIMULATED EVENT LOG</small><h3>关键事件导航</h3><p>基于已保存的首次迭代事件 · 非实时监控</p></div><div class="ops-v7-event-stats">${eventStats(evs)}</div></div>
+    <div class="ops-v7-heading"><div><small>SIMULATED EVENT LOG</small><h3>关键事件导航</h3><p>首次迭代事件 · 按时间定位</p></div><div class="ops-v7-event-stats">${eventStats(evs)}</div></div>
     <div class="ops-v7-tools"><label class="ops-v7-search-label">搜索事件 <input type="search" class="ops-v7-search" placeholder="任务 / 平台 / 事件" aria-label="按任务、平台或事件关键词检索"></label>
       <label class="ops-v7-filter-label">事件类别 <select class="ops-v7-filter" aria-label="筛选事件类别"><option value="all">全部</option><option value="incident">异常</option><option value="dispatch">派遣</option><option value="arrived">交付</option></select></label>
       <button type="button" class="ops-v7-jump" data-ops-first-incident>定位首个异常</button></div>
