@@ -60,3 +60,11 @@
 .experiment-intro .button{white-space:nowrap}
 @media(max-width:900px){.experiment-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.experiment-form-grid{grid-template-columns:1fr}.experiment-intro{align-items:flex-start;flex-wrap:wrap}.experiment-intro span{flex-basis:100%}.experiment-intro .button{width:100%}}
+
+/* Never imply geographic accuracy for the synthetic civilian airdrop graph. */
+.geo-map.synthetic-map .geo-basemap,
+.geo-map.synthetic-map .geo-tiles,
+.geo-map.synthetic-map .geo-basemap-switch,
+.geo-map.synthetic-map .geo-attribution{display:none!important}
+.geo-map.synthetic-map{background-color:#f4f8fb!important;background-image:linear-gradient(rgba(77,132,160,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(77,132,160,.09) 1px,transparent 1px)!important;background-size:28px 28px!important}
+.geo-map.synthetic-map .geo-city-label small{letter-spacing:.08em}
