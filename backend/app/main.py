@@ -218,6 +218,8 @@ def create_vehicle(body:s.VehicleIn,db:Session=Depends(get_db),user:m.User=Depen
     ensure_active_network(db,home.network_id)
     if home.network_id=='civil-airdrop' and body.category!='drone':
         raise HTTPException(status_code=422,detail='民用空投网络只允许无人机平台')
+    if home.network_id=='civil-airdrop' and not home.id.startswith('AIR-MAIN-'):
+        raise HTTPException(status_code=422,detail='民用空投无人机必须部署在大陆侧合成补给点')
     if db.scalar(select(m.Vehicle.id).where(m.Vehicle.code==body.code).limit(1)):
         raise HTTPException(status_code=409,detail='平台编号已存在')
     vehicle=m.Vehicle(id='V-'+uuid4().hex[:8].upper(),status='available',**body.model_dump())
@@ -301,8 +303,8 @@ def create_task(scenario_id:str,body:s.TaskIn,db:Session=Depends(get_db),user:m.
     if scenario.network_id=='civil-airdrop':
         origin_shore='mainland' if body.origin.startswith('AIR-MAIN-') else 'island' if body.origin.startswith('AIR-ISLE-') else ''
         destination_shore='mainland' if body.destination.startswith('AIR-MAIN-') else 'island' if body.destination.startswith('AIR-ISLE-') else ''
-        if body.transport_mode!='airdrop' or not origin_shore or not destination_shore or origin_shore==destination_shore:
-            raise HTTPException(status_code=422,detail='空投任务必须连接大陆侧与台湾侧的合成接收点')
+        if body.transport_mode!='airdrop' or origin_shore!='mainland' or destination_shore!='island':
+            raise HTTPException(status_code=422,detail='空投任务必须从大陆侧补给点投送至台湾侧合成接收点')
         direct=db.scalar(select(m.Edge.id).where(
             (((m.Edge.source==body.origin)&(m.Edge.target==body.destination))|((m.Edge.source==body.destination)&(m.Edge.target==body.origin))),
             m.Edge.transport_mode=='airdrop',m.Edge.status!='closed').limit(1))
@@ -399,8 +401,8 @@ def route_preview(origin:str,destination:str,city_id:str='national',strategy:str
     if origin_node.network_id=='civil-airdrop':
         origin_shore='mainland' if origin.startswith('AIR-MAIN-') else 'island' if origin.startswith('AIR-ISLE-') else ''
         destination_shore='mainland' if destination.startswith('AIR-MAIN-') else 'island' if destination.startswith('AIR-ISLE-') else ''
-        if transport_mode not in ('multimodal','airdrop') or not origin_shore or not destination_shore or origin_shore==destination_shore:
-            raise HTTPException(status_code=422,detail='当前合成场景只提供大陆侧与台湾侧之间的直接空投示意路线')
+        if transport_mode!='airdrop' or origin_shore!='mainland' or destination_shore!='island':
+            raise HTTPException(status_code=422,detail='合成空投路径只允许从大陆侧补给点指向台湾侧接收点')
         edges=[e for e in edges if {e['source'],e['target']}=={origin,destination} and e.get('transport_mode')=='airdrop']
     if transport_mode!='multimodal':edges=[e for e in edges if e.get('transport_mode','road')==transport_mode]
     path=sim.find_path(sim.build_graph(nodes,edges),origin,destination,strategy=strategy,weather=weather,algorithm=algorithm)
