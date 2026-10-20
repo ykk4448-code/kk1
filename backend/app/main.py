@@ -50,6 +50,18 @@ def lookup(db: Session, model, key):
     return obj
 
 
+def ensure_active_scenario(scenario):
+    if scenario.status == 'archived':
+        raise HTTPException(status_code=409, detail='归档数据只读；请在当前民用空投想定中创建新记录')
+
+
+def ensure_active_network(db: Session, network_id: str):
+    active = db.scalar(select(m.Scenario.id).where(
+        m.Scenario.network_id == network_id, m.Scenario.status != 'archived').limit(1))
+    if not active:
+        raise HTTPException(status_code=409, detail='该网络已归档，只允许查看历史实验记录')
+
+
 def rows(db: Session, model) -> list[dict]:
     return [getattr(s,model.__name__+'Out').model_validate(row).model_dump(mode='json')
             for row in db.scalars(select(model)).all()]
@@ -67,6 +79,10 @@ def graph_and_fleet(db: Session, city_id: str | None = None, network_id: str | N
             else:
                 network_id='regional' if any(n['network_id']=='regional' for n in nodes) else 'geographic' if any(n['network_id']=='geographic' for n in nodes) else 'baseline'
     if network_id is not None:
+        active_network = db.scalar(select(m.Scenario.id).where(
+            m.Scenario.network_id == network_id, m.Scenario.status != 'archived').limit(1))
+        if not active_network:
+            return [], [], []
         nodes = [n for n in nodes if n['network_id']==network_id]
     if city_id or network_id is not None:
         ids = {n['id'] for n in nodes}
@@ -144,6 +160,9 @@ def create_node(body:s.NodeIn,db:Session=Depends(get_db),user:m.User=Depends(can
     if db.get(m.Node,body.id):
         raise HTTPException(status_code=409,detail='节点编号已存在')
     payload=body.model_dump()
+    if payload['city_id']=='national' and payload['network_id']!='civil-airdrop':
+        raise HTTPException(status_code=422,detail='当前工作台仅允许在民用空投合成网络中新增设施')
+    if payload['network_id']=='civil-airdrop': ensure_active_network(db,payload['network_id'])
     if payload['lon'] is None or payload['lat'] is None:
         raise HTTPException(status_code=422,detail='真实城市地图节点必须提供经纬度')
     ensure_in_city(payload['city_id'],payload['lat'],payload['lon'])
@@ -154,6 +173,7 @@ def create_node(body:s.NodeIn,db:Session=Depends(get_db),user:m.User=Depends(can
 @app.patch(f'{PREFIX}/network/nodes/{{node_id}}',response_model=s.NodeOut)
 def update_node(node_id:str,body:s.NodePatch,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     node=lookup(db,m.Node,node_id)
+    ensure_active_network(db,node.network_id)
     changes=body.model_dump(exclude_unset=True,exclude_none=True)
     if not changes:raise HTTPException(status_code=422,detail='没有提供有效的节点更新内容')
     candidate_lat=changes.get('lat',node.lat);candidate_lon=changes.get('lon',node.lon)
@@ -167,6 +187,9 @@ def create_edge(body:s.EdgeIn,db:Session=Depends(get_db),user:m.User=Depends(can
     a=lookup(db,m.Node,body.source);b=lookup(db,m.Node,body.target)
     if a.city_id!=b.city_id:raise HTTPException(status_code=422,detail='禁止跨城市创建路网通道')
     if a.network_id!=b.network_id:raise HTTPException(status_code=422,detail='禁止连接不同路网的节点')
+    ensure_active_network(db,a.network_id)
+    if a.network_id=='civil-airdrop' and body.transport_mode!='airdrop':
+        raise HTTPException(status_code=422,detail='民用空投网络只允许无人机空投通道')
     # Prevent ambiguous parallel edges in the bidirectional model.
     existing=db.scalar(select(m.Edge.id).where(
         ((m.Edge.source==body.source)&(m.Edge.target==body.target)) |
@@ -178,7 +201,10 @@ def create_edge(body:s.EdgeIn,db:Session=Depends(get_db),user:m.User=Depends(can
 
 @app.post(f'{PREFIX}/vehicles',response_model=s.VehicleOut,status_code=201)
 def create_vehicle(body:s.VehicleIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
-    lookup(db,m.Node,body.home_node)
+    home=lookup(db,m.Node,body.home_node)
+    ensure_active_network(db,home.network_id)
+    if home.network_id=='civil-airdrop' and body.category!='drone':
+        raise HTTPException(status_code=422,detail='民用空投网络只允许无人机平台')
     if db.scalar(select(m.Vehicle.id).where(m.Vehicle.code==body.code).limit(1)):
         raise HTTPException(status_code=409,detail='平台编号已存在')
     vehicle=m.Vehicle(id='V-'+uuid4().hex[:8].upper(),status='available',**body.model_dump())
@@ -193,6 +219,8 @@ def scenarios(city_id:str|None=None,db:Session=Depends(get_db), _user:m.User=Dep
 
 @app.post(f'{PREFIX}/scenarios',response_model=s.ScenarioOut,status_code=201)
 def create_scenario(body:s.ScenarioIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
+    if body.city_id=='national' and body.network_id!='civil-airdrop':
+        raise HTTPException(status_code=422,detail='当前产品只允许在民用空投合成网络中新建想定')
     scenario = m.Scenario(id='SCN-'+uuid4().hex[:8].upper(),**body.model_dump())
     db.add(scenario);note(db,user,'scenario.create',scenario.id,body.model_dump());db.commit();db.refresh(scenario)
     return scenario
@@ -204,6 +232,7 @@ def get_scenario(scenario_id:str,db:Session=Depends(get_db), _user:m.User=Depend
 @app.patch(f'{PREFIX}/scenarios/{{scenario_id}}',response_model=s.ScenarioOut)
 def update_scenario(scenario_id:str,body:s.ScenarioPatch,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     scenario = lookup(db,m.Scenario,scenario_id)
+    ensure_active_scenario(scenario)
     changes = body.model_dump(exclude_unset=True,exclude_none=True)
     for key,value in changes.items(): setattr(scenario,key,value)
     note(db,user,'scenario.update',scenario.id,changes);db.commit();db.refresh(scenario)
@@ -218,6 +247,7 @@ def get_configuration(scenario_id:str,db:Session=Depends(get_db),_user:m.User=De
 @app.patch(f'{PREFIX}/scenarios/{{scenario_id}}/configuration')
 def set_configuration(scenario_id:str,body:s.ConfigurationPatch,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     scenario=lookup(db,m.Scenario,scenario_id)
+    ensure_active_scenario(scenario)
     _,_,vehicles=graph_and_fleet(db,scenario.city_id,scenario.network_id)
     current=normalize_configuration(scenario.configuration_data,vehicles)
     patch=body.model_dump(exclude_unset=True,exclude_none=True)
@@ -254,6 +284,9 @@ def tasks(scenario_id:str,db:Session=Depends(get_db),_user:m.User=Depends(curren
 def create_task(scenario_id:str,body:s.TaskIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     lookup(db,m.Scenario,scenario_id)
     scenario=lookup(db,m.Scenario,scenario_id)
+    ensure_active_scenario(scenario)
+    if scenario.network_id=='civil-airdrop' and body.transport_mode!='airdrop':
+        raise HTTPException(status_code=422,detail='民用空投想定中的所有任务必须使用无人机空投')
     same_city_nodes(db,scenario.city_id,body.origin,body.destination,network_id=scenario.network_id)
     if body.leg_index>1 and not body.predecessor_task_id:
         raise HTTPException(status_code=422,detail='后续运输分段必须关联前序任务')
@@ -274,6 +307,8 @@ def create_task(scenario_id:str,body:s.TaskIn,db:Session=Depends(get_db),user:m.
 @app.patch(f'{PREFIX}/scenarios/{{scenario_id}}/tasks/{{task_id}}',response_model=s.TaskOut)
 def update_task(scenario_id:str,task_id:str,body:s.TaskPatch,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     task=lookup(db,m.DeliveryTask,task_id)
+    scenario=lookup(db,m.Scenario,scenario_id)
+    ensure_active_scenario(scenario)
     if task.scenario_id!=scenario_id:raise HTTPException(status_code=404,detail='任务不属于当前想定')
     changes=body.model_dump(exclude_unset=True,exclude_none=True)
     for key,value in changes.items():setattr(task,key,value)
@@ -288,6 +323,8 @@ def update_task(scenario_id:str,task_id:str,body:s.TaskPatch,db:Session=Depends(
 @app.delete(f'{PREFIX}/scenarios/{{scenario_id}}/tasks/{{task_id}}')
 def delete_task(scenario_id:str,task_id:str,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     task=lookup(db,m.DeliveryTask,task_id)
+    scenario=lookup(db,m.Scenario,scenario_id)
+    ensure_active_scenario(scenario)
     if task.scenario_id!=scenario_id:raise HTTPException(status_code=404,detail='任务不存在于当前场景')
     if db.scalar(select(m.DeliveryTask).where(m.DeliveryTask.predecessor_task_id==task_id)):
         raise HTTPException(status_code=422,detail='该任务仍有关联的后续接驳分段，请先移除后续分段')
@@ -309,6 +346,7 @@ class VehiclePatch(BaseModel):
 @app.patch(f'{PREFIX}/vehicles/{{vehicle_id}}',response_model=s.VehicleOut)
 def update_vehicle(vehicle_id:str,body:VehiclePatch,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     vehicle=lookup(db,m.Vehicle,vehicle_id)
+    ensure_active_network(db,lookup(db,m.Node,vehicle.home_node).network_id)
     changes=body.model_dump(exclude_unset=True,exclude_none=True)
     if not changes:raise HTTPException(status_code=422,detail='未提供任何有效修改')
     for name,value in changes.items():setattr(vehicle,name,value)
@@ -318,6 +356,8 @@ def update_vehicle(vehicle_id:str,body:VehiclePatch,db:Session=Depends(get_db),u
 @app.patch(f'{PREFIX}/network/edges/{{edge_id}}',response_model=s.EdgeOut)
 def update_edge(edge_id:str,body:s.EdgeStatusIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     edge=lookup(db,m.Edge,edge_id)
+    edge_source=lookup(db,m.Node,edge.source)
+    ensure_active_network(db,edge_source.network_id)
     changes=body.model_dump(exclude_unset=True,exclude_none=True)
     if not changes:raise HTTPException(status_code=422,detail='未提供任何有效修改')
     for name,value in changes.items():setattr(edge,name,value)
@@ -332,7 +372,10 @@ def route_preview(origin:str,destination:str,city_id:str='wuhan',strategy:str='b
     origin_node=lookup(db,m.Node,origin)
     same_city_nodes(db,city_id,destination,network_id=origin_node.network_id)
     nodes,edges,_=graph_and_fleet(db,city_id,origin_node.network_id)
-    if transport_mode not in ('multimodal','road','sea'):raise HTTPException(status_code=422,detail='不支持的运输方式')
+    if transport_mode not in ('multimodal','road','sea','airdrop'):raise HTTPException(status_code=422,detail='不支持的投送方式')
+    ensure_active_network(db,origin_node.network_id)
+    if origin_node.network_id=='civil-airdrop' and transport_mode not in ('multimodal','airdrop'):
+        raise HTTPException(status_code=422,detail='民用空投场景不提供陆路或海运路线')
     if transport_mode!='multimodal':edges=[e for e in edges if e.get('transport_mode','road')==transport_mode]
     path=sim.find_path(sim.build_graph(nodes,edges),origin,destination,strategy=strategy,weather=weather,algorithm=algorithm)
     if path is None:raise HTTPException(status_code=409,detail='当前没有可通行的路径')
@@ -343,6 +386,7 @@ def route_preview(origin:str,destination:str,city_id:str='wuhan',strategy:str='b
 @app.post(f'{PREFIX}/plans',response_model=s.PlanOut,status_code=201)
 def create_plan(body:s.PlanIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
     scenario = lookup(db,m.Scenario,body.scenario_id)
+    ensure_active_scenario(scenario)
     node_data,edge_data,vehicle_data=graph_and_fleet(db,scenario.city_id,scenario.network_id)
     task_data=[s.TaskOut.model_validate(t).model_dump(mode='json') for t in scenario.tasks]
     if not task_data:raise HTTPException(status_code=422,detail='当前场景没有投送任务')
