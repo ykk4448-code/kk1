@@ -172,7 +172,7 @@ function runPanel(){
    </form>
   </div>
   <p class="run-exp-note">保存预设只写入当前浏览器；点击“运行并记录”才会启动仿真并创建独立实验档案。全部路线均为合成示意。</p>
-  <div class="run-info"><span>01 / 任务准备</span><span>02 / 空中投送</span><span>03 / 安全返航</span></div>
+  <div class="run-info"><span>01 / 任务准备</span><span>02 / 空投过程</span><span>03 / 结果复盘</span></div>
  </div>`;
 }
 const operationStatus={standby:'等待任务',in_transit:'投送途中',delivered:'已完成',failed:'任务中断',unavailable:'不可用'};
