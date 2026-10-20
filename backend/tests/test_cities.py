@@ -27,6 +27,13 @@ def test_cross_network_task_edge_and_route_are_rejected(client,admin_headers):
       'source':'AIR-MAIN-A','target':'N01','distance_km':100,'risk':0.02,'transport_mode':'airdrop'}).status_code==422
     assert client.get(BASE+'/routes/preview',headers=h,params={
       'city_id':'national','origin':'AIR-MAIN-A','destination':'N01','transport_mode':'airdrop'}).status_code==422
+    reverse_task=client.post(BASE+f'/scenarios/{SCENARIO}/tasks',headers=h,json={
+      'cargo':'反向任务不允许','weight_kg':5,'origin':'AIR-ISLE-A','destination':'AIR-MAIN-A',
+      'transport_mode':'airdrop','deadline_min':100,'priority':1})
+    assert reverse_task.status_code==422
+    reverse_route=client.get(BASE+'/routes/preview',headers=h,params={
+      'city_id':'national','origin':'AIR-ISLE-A','destination':'AIR-MAIN-A','transport_mode':'airdrop'})
+    assert reverse_route.status_code==422
 
 
 def test_direct_airdrop_route_preview_and_task_edit(client,admin_headers):
