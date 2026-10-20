@@ -53,6 +53,8 @@ def lookup(db: Session, model, key):
 def ensure_active_scenario(scenario):
     if scenario.status == 'archived':
         raise HTTPException(status_code=409, detail='归档数据只读；请在当前民用空投想定中创建新记录')
+    if scenario.network_id != 'civil-airdrop':
+        raise HTTPException(status_code=409, detail='历史网络只读；当前工作台只允许修改民用空投合成想定')
 
 
 def ensure_active_network(db: Session, network_id: str):
