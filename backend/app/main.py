@@ -21,6 +21,7 @@ from .cities import CITIES, REGIONAL_CITY
 from .replay import assessment_projection
 from .migration import upgrade_schema
 from .operations import normalize_configuration, scenario_vehicles, telemetry_at, delivery_report
+from .airdrop import EXPERIMENT_MODEL_VERSION, normalize_parameters, parameter_summary
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -35,8 +36,8 @@ async def lifespan(_app: FastAPI):
                 raise RuntimeError('Production cannot start while the demo admin password is active')
     yield
 
-app = FastAPI(title='Aether Route · 无人投送仿真平台', version='4.0.0',
-              description='A*-Sim synthetic logistics mission planning and Monte Carlo simulation',
+app = FastAPI(title='AETHER · 民用应急空投实验平台', version='5.0.0',
+              description='Synthetic civilian emergency-aid airdrop experiments with reproducible records',
               lifespan=lifespan)
 app.add_middleware(CORSMiddleware,allow_origins=CORS_ORIGINS,allow_credentials=False,
                    allow_methods=['GET','POST','PUT','PATCH','DELETE'],allow_headers=['Authorization','Content-Type'])
@@ -61,7 +62,10 @@ def graph_and_fleet(db: Session, city_id: str | None = None, network_id: str | N
     if city_id:
         nodes = [n for n in nodes if n['city_id'] == city_id]
         if network_id is None:
-            network_id='regional' if any(n['network_id']=='regional' for n in nodes) else 'geographic' if any(n['network_id']=='geographic' for n in nodes) else 'baseline'
+            if city_id == 'national' and any(n['network_id']=='civil-airdrop' for n in nodes):
+                network_id='civil-airdrop'
+            else:
+                network_id='regional' if any(n['network_id']=='regional' for n in nodes) else 'geographic' if any(n['network_id']=='geographic' for n in nodes) else 'baseline'
     if network_id is not None:
         nodes = [n for n in nodes if n['network_id']==network_id]
     if city_id or network_id is not None:
@@ -90,7 +94,8 @@ def same_city_nodes(db: Session, city_id: str, *node_ids: str, network_id: str |
 
 @app.get(f'{PREFIX}/cities')
 def cities(_user:m.User=Depends(current_user)):
-    return [REGIONAL_CITY]+CITIES
+    # Legacy city networks remain archived for audit; the active product is the synthetic civil airdrop lab.
+    return [REGIONAL_CITY]
 
 
 def note(db:Session, user:m.User, action:str, subject:str, details:dict|None=None):
@@ -114,15 +119,15 @@ def me(user:m.User=Depends(current_user)):
 
 @app.get(f'{PREFIX}/overview')
 def overview(city_id:str|None=None,db:Session=Depends(get_db), _user:m.User=Depends(current_user)):
-    scenarios = db.scalar(select(func.count()).select_from(m.Scenario)) or 0
-    tasks = db.scalar(select(func.count()).select_from(m.DeliveryTask)) or 0
+    scenarios = db.scalar(select(func.count()).select_from(m.Scenario).where(m.Scenario.status!='archived')) or 0
+    tasks = db.scalar(select(func.count()).select_from(m.DeliveryTask).join(m.Scenario).where(m.Scenario.status!='archived')) or 0
     node_data,edge_data,vehicle_data=graph_and_fleet(db,city_id)
     vehicles=vehicle_data
     edges=edge_data
     last_run = db.scalar(select(m.SimulationRun).order_by(m.SimulationRun.created_at.desc(),m.SimulationRun.id.desc()).limit(1))
     if city_id:
-        scenarios=db.scalar(select(func.count()).select_from(m.Scenario).where(m.Scenario.city_id==city_id)) or 0
-        tasks=db.scalar(select(func.count()).select_from(m.DeliveryTask).join(m.Scenario).where(m.Scenario.city_id==city_id)) or 0
+        scenarios=db.scalar(select(func.count()).select_from(m.Scenario).where(m.Scenario.city_id==city_id,m.Scenario.status!='archived')) or 0
+        tasks=db.scalar(select(func.count()).select_from(m.DeliveryTask).join(m.Scenario).where(m.Scenario.city_id==city_id,m.Scenario.status!='archived')) or 0
     return {'scenario_count':scenarios,'task_count':tasks,'vehicle_count':len(vehicles),
             'available_vehicles':sum(v['status']=='available' for v in vehicles),
             'node_count':len(node_data),
@@ -182,7 +187,7 @@ def create_vehicle(body:s.VehicleIn,db:Session=Depends(get_db),user:m.User=Depen
 
 @app.get(f'{PREFIX}/scenarios',response_model=list[s.ScenarioOut])
 def scenarios(city_id:str|None=None,db:Session=Depends(get_db), _user:m.User=Depends(current_user)):
-    q=select(m.Scenario).order_by(m.Scenario.created_at,m.Scenario.id)
+    q=select(m.Scenario).where(m.Scenario.status!='archived').order_by(m.Scenario.created_at,m.Scenario.id)
     if city_id:q=q.where(m.Scenario.city_id==city_id)
     return db.scalars(q).all()
 
@@ -406,6 +411,89 @@ def simulation_report(run_id:str,db:Session=Depends(get_db),_user:m.User=Depends
     plan=lookup(db,m.Plan,run.plan_id)
     return delivery_report({'id':run.id,'iterations':run.iterations,'events':run.events,'metrics':run.metrics},
        {'id':plan.id,'assignment_data':plan.assignment_data,'summary_data':plan.summary_data,'snapshot_data':plan.snapshot_data})
+
+@app.post(f'{PREFIX}/experiments',response_model=s.ExperimentOut,status_code=201)
+def create_experiment(body:s.ExperimentIn,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
+    """Run and persist an immutable civilian airdrop experiment record."""
+    scenario=lookup(db,m.Scenario,body.scenario_id)
+    if scenario.status=='archived':
+        raise HTTPException(status_code=409,detail='归档想定只读，不能创建新实验')
+    if scenario.network_id!='civil-airdrop':
+        raise HTTPException(status_code=422,detail='实验记录仅支持当前民用空投合成想定')
+    node_data,edge_data,vehicle_data=graph_and_fleet(db,scenario.city_id,scenario.network_id)
+    task_data=[s.TaskOut.model_validate(t).model_dump(mode='json') for t in scenario.tasks]
+    if not task_data:
+        raise HTTPException(status_code=422,detail='当前空投想定没有任务')
+    if any(t.get('transport_mode')!='airdrop' for t in task_data):
+        raise HTTPException(status_code=422,detail='民用空投实验中的所有任务必须使用无人机空投')
+    if any(e.get('transport_mode')!='airdrop' for e in edge_data):
+        raise HTTPException(status_code=422,detail='活动空投网络不得混入陆路或海运通道')
+    if any(v.get('category')!='drone' for v in vehicle_data):
+        raise HTTPException(status_code=422,detail='活动空投网络只允许无人机平台')
+    configuration=normalize_configuration(scenario.configuration_data,vehicle_data)
+    planned_vehicles=scenario_vehicles(configuration,vehicle_data)
+    raw_params=body.parameters.model_dump(mode='json')
+    params=normalize_parameters(raw_params)
+    params_snapshot=parameter_summary(params)
+    scenario_data=s.ScenarioOut.model_validate(scenario).model_dump(mode='json')
+    scenario_data.update({'weather':params['weather'],'wind_kmh':params['wind_kmh'],
+                          'visibility_km':params['visibility_km']})
+    plan_result=sim.generate_plan(node_data,edge_data,planned_vehicles,task_data,scenario_data,
+                                  body.strategy,body.algorithm,experiment=params)
+    plan_id='PLN-'+uuid4().hex[:8].upper()
+    plan=m.Plan(id=plan_id,scenario_id=scenario.id,
+                name=f'{body.name} · {dict(balanced="均衡",fastest="时效",safest="稳健")[body.strategy]}',
+                strategy=body.strategy,algorithm=body.algorithm,
+                assignment_data=plan_result['assignments'],summary_data=plan_result['summary'],
+                snapshot_data={'scenario':scenario_data,'nodes':node_data,'edges':edge_data,
+                               'vehicles':planned_vehicles,'tasks':task_data,
+                               'configuration':configuration,'experiment_data':params_snapshot})
+    db.add(plan)
+    db.flush()
+    execution=sim.simulate({'assignments':plan_result['assignments'],'summary':plan_result['summary']},
+                           scenario_data,planned_vehicles,node_data,edge_data,
+                           seed=body.seed,iterations=body.iterations,experiment=params)
+    run_id='RUN-'+uuid4().hex[:8].upper()
+    run=m.SimulationRun(id=run_id,plan_id=plan.id,scenario_id=scenario.id,
+                        seed=body.seed,iterations=body.iterations,
+                        experiment_data=params_snapshot,**execution)
+    db.add(run)
+    db.flush()
+    record=m.ExperimentRecord(
+        id='EXP-'+uuid4().hex[:8].upper(),scenario_id=scenario.id,plan_id=plan.id,run_id=run.id,
+        name=body.name,notes=body.notes,parameters=params_snapshot,
+        results={'metrics':execution['metrics'],'plan_summary':plan_result['summary'],
+                 'seed':body.seed,'iterations':body.iterations,'sample_count':len(execution['samples']),
+                 'run_id':run.id,'plan_id':plan.id},
+        model_version=EXPERIMENT_MODEL_VERSION,created_by=user.username)
+    db.add(record)
+    note(db,user,'experiment.create',record.id,{'scenario_id':scenario.id,'plan_id':plan.id,
+         'run_id':run.id,'parameters':params_snapshot,'seed':body.seed,'iterations':body.iterations})
+    db.commit()
+    db.refresh(record)
+    return record
+
+@app.get(f'{PREFIX}/experiments',response_model=list[s.ExperimentOut])
+def list_experiments(scenario_id:str|None=None,limit:int=Query(default=50,ge=1,le=200),
+                     db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
+    q=select(m.ExperimentRecord).order_by(m.ExperimentRecord.created_at.desc(),m.ExperimentRecord.id.desc()).limit(limit)
+    if scenario_id:q=q.where(m.ExperimentRecord.scenario_id==scenario_id)
+    return db.scalars(q).all()
+
+@app.get(f'{PREFIX}/experiments/{{experiment_id}}',response_model=s.ExperimentOut)
+def get_experiment(experiment_id:str,db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
+    return lookup(db,m.ExperimentRecord,experiment_id)
+
+@app.patch(f'{PREFIX}/experiments/{{experiment_id}}',response_model=s.ExperimentOut)
+def update_experiment(experiment_id:str,body:s.ExperimentPatch,db:Session=Depends(get_db),user:m.User=Depends(can_edit)):
+    record=lookup(db,m.ExperimentRecord,experiment_id)
+    changes=body.model_dump(exclude_unset=True,exclude_none=True)
+    if not changes:raise HTTPException(status_code=422,detail='请提供实验名称或备注修改')
+    for key,value in changes.items():setattr(record,key,value)
+    note(db,user,'experiment.annotate',record.id,changes)
+    db.commit()
+    db.refresh(record)
+    return record
 
 @app.get(f'{PREFIX}/simulations/{{run_id}}/assessment')
 def assessment(run_id:str,minute:float=Query(default=0,ge=0,le=100000),db:Session=Depends(get_db),_user:m.User=Depends(current_user)):
