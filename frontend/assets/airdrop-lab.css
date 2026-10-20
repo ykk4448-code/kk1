@@ -1,0 +1,45 @@
+/* Air experiment workspace: grouped controls replace the playback timeline. */
+body{--lab-height:144px}
+.experiment-console{position:fixed;left:24px;right:24px;bottom:24px;z-index:45;pointer-events:auto;background:#fffffff7;border:1px solid #c6dce7;border-radius:8px;color:#2d526a;box-shadow:0 5px 24px #274e6714;max-height:42dvh;overflow:auto}
+.experiment-console>header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid #dce8ef;background:#f5f9fc}
+.lab-tabs{display:flex;gap:5px;flex-shrink:0}.lab-tabs button{background:transparent;border:1px solid transparent;color:#567c93;border-radius:5px;font:600 12px 'Microsoft YaHei',sans-serif;cursor:pointer;padding:9px 14px;white-space:nowrap}.lab-tabs button[aria-selected=true]{background:#245e80;color:white;border-color:#245e80}
+.lab-actions{display:flex;align-items:center;gap:8px}.lab-actions>.button{font-size:11px!important;padding:7px 12px!important;min-height:32px!important;white-space:nowrap}.lab-actions>span{font-size:10px;color:#7f96a4;max-width:220px;line-height:1.5}
+.lab-pane{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:14px 18px;min-height:82px}.lab-pane[hidden]{display:none!important}
+.lab-field{display:flex;flex-direction:column;gap:6px;min-width:120px;color:#54768b;font-size:11px}.lab-field select,.lab-field input{width:155px;min-height:33px;height:33px;font:12px 'Microsoft YaHei',sans-serif;color:#2b5671;padding:5px 9px;border:1px solid #c9dce8;border-radius:5px;background:#f9fcfe}.lab-context{margin-left:auto;text-align:right;display:flex;flex-direction:column;gap:6px}.lab-context b{font-size:12px}.lab-context small{font-size:10px;color:#8097a5}
+.lab-observer{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:11px}.lab-observer button,.lab-observer select{background:#edf5fa;color:#2e6688;border:1px solid #c6dce8;border-radius:4px;padding:6px 8px;font:11px 'Microsoft YaHei',sans-serif}
+#lab-comparison-results{flex:1;min-width:260px;font-size:11px;color:#6c8798}.lab-comparison{overflow:auto}.lab-comparison table{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}.lab-comparison th,.lab-comparison td{padding:7px 10px;border-bottom:1px solid #dce8ed;text-align:left}.lab-comparison small{display:block;margin-top:8px;font-size:10px;line-height:1.6}
+.workspace-has-assessment .desk-event-strip{bottom:3px!important}
+.workspace-has-assessment :is(.schedule-panel,.inspector-panel,.fleet-panel,.ops-v7-header,.shipment-panel){bottom:calc(var(--lab-height) + 38px)!important}
+.workspace-has-assessment .desk-map-layers{bottom:calc(var(--lab-height) + 38px)!important}
+.workspace-has-assessment .trend-panel{bottom:calc(var(--lab-height) + 38px)!important}
+.workspace-has-assessment.workspace-show-stats .desk-map-layers{bottom:calc(var(--lab-height) + 230px)!important}
+.workspace-has-assessment .geo-scale{bottom:calc(var(--lab-height) + 44px)!important}
+.workspace-has-assessment .workspace-tools [data-workspace-tool=shipments],.workspace-has-assessment [data-mobile-pane=shipments]{display:none!important}
+.workspace-has-assessment .map-stage .geo-route-legend{bottom:calc(var(--lab-height) + 83px)!important}
+.experiment-intro{display:none}
+@media(max-width:1150px){
+ .experiment-console{left:24px;right:24px}.experiment-console>header{flex-wrap:wrap;padding:8px 10px;gap:6px}.lab-actions{margin-left:auto}.lab-actions>span{display:none}.lab-tabs button{padding:7px 10px;font-size:11px}.lab-pane{gap:10px;padding:12px}.lab-context{display:none}
+ .workspace-has-assessment .workspace-mobile-tabs{bottom:calc(var(--lab-height) + 38px)!important}
+ .workspace-has-assessment :is(.schedule-panel,.inspector-panel,.fleet-panel,.ops-v7-header,.trend-panel){bottom:calc(var(--lab-height) + 78px)!important;height:29dvh!important}
+ .lab-field select,.lab-field input{width:140px}.lab-pane>.button{font-size:11px!important;padding:8px!important}
+}
+@media(max-width:759px){
+ .experiment-console{left:12px;right:12px;bottom:18px;max-height:42dvh}.lab-tabs{width:100%;justify-content:space-between;gap:2px}.lab-tabs button{padding:7px 5px;font-size:10px}.lab-actions{width:100%;justify-content:flex-end}.lab-pane{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.lab-field{min-width:0}.lab-field select,.lab-field input{width:100%;font-size:11px}.lab-pane>.lab-context{display:none}#lab-comparison-results{grid-column:1/-1;min-width:0}.lab-observer{grid-column:1/-1;margin:0}.workspace-has-assessment .workspace-mobile-tabs button{font-size:10px!important}.workspace-has-assessment .workspace-tools{bottom:calc(var(--lab-height) + 85px)!important}
+}
+/* Experiment records and parameter form */
+.experiment-intro{display:flex;align-items:center;gap:12px;margin:12px 0;padding:12px 15px;background:#f5f9fc;border:1px solid #d8e5ed;border-radius:6px;color:#5e788b;font-size:12px}
+.experiment-intro b{color:#234d68;white-space:nowrap}.experiment-intro span{flex:1;line-height:1.5}
+.civil-experiment-form{display:flex;flex-direction:column;gap:13px}
+.experiment-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.civil-experiment-form label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#58778c;min-width:0}
+.civil-experiment-form input,.civil-experiment-form select,.civil-experiment-form textarea{width:100%;min-width:0;min-height:34px;padding:7px 9px;border:1px solid #d0dfe8;border-radius:5px;background:#fbfdff;color:#24475e;font:inherit;font-size:12px}
+.civil-experiment-form textarea{resize:vertical;min-height:58px}
+.civil-experiment-form .button{align-self:flex-start}
+.experiment-intro .button{white-space:nowrap}
+@media(max-width:900px){.experiment-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.experiment-form-grid{grid-template-columns:1fr}.experiment-intro{align-items:flex-start;flex-wrap:wrap}.experiment-intro span{flex-basis:100%}.experiment-intro .button{width:100%}}
+
+
+.lab-comparison table th,.lab-comparison table td{font-size:11px!important;padding:7px 9px!important;line-height:1.5!important;height:auto!important;min-height:0!important}
+.lab-comparison table{font-size:11px!important;min-width:0!important}
+@media(max-width:1150px){#lab-comparison-results{flex-basis:100%}.experiment-console{max-height:38dvh}}

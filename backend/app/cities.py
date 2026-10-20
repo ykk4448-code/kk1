@@ -5,7 +5,7 @@ synthetic planning graph links, NOT observed routable road centerlines.
 """
 from math import radians, cos, asin, sqrt
 
-REGIONAL_CITY={'id':'national','name':'全国跨区域物流','province':'跨省 · 跨市 · 跨海','center':[29.5,115.5],'zoom':5,'subtitle':'内陆干线 · 港口接驳 · 台湾跨海示例','code':'CN'}
+REGIONAL_CITY={'id':'national','name':'两岸无人机空投','province':'直达空投实验','center':[25.2,119.7],'zoom':6,'subtitle':'区域参考 · 直接空投示意','code':'AIR'}
 
 CITIES = [
     {'id':'wuhan','name':'武汉','province':'湖北','center':[30.583,114.315],'zoom':10,'subtitle':'江城双岸 · 城市应急物资配送','code':'WH'},

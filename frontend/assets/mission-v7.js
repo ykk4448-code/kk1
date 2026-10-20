@@ -29,7 +29,7 @@ let scheduled=false;
 let currentView=null;
 let pendingRequest=null;
 const state={filter:'all',query:'',limit:48,inspectorOpen:true};
-const station=()=>{const desk=document.querySelector('#assessment');return desk?.isConnected&&desk.querySelector('.desk-player')?desk:null;};
+const station=()=>{const desk=document.querySelector('#assessment');return desk?.isConnected&&desk.querySelector('.desk-player,.experiment-console')?desk:null;};
 function cachedRun(id){if(!cache.has(id))return null;const data=cache.get(id);cache.delete(id);cache.set(id,data);return data;}
 function storeRun(id,data){cache.set(id,data);if(cache.size>MAX_CACHED_RUNS)cache.delete(cache.keys().next().value);}
 function getRun(id){
@@ -64,7 +64,7 @@ function scaffold(data){
 }
 function eventList(desk){
  const board=desk.querySelector('.ops-v7-header');if(!board)return;
- const runId=board.dataset.run;
+ const runId=board.dataset.opsRun;
  const data=cachedRun(runId);if(!data)return;
  const all=normalizedEvents(data),matched=filterEvents(all,state);
  const count=matched.length;
@@ -75,10 +75,10 @@ function eventList(desk){
  timeSync(desk);
 }
 function timeSync(desk){
- const slider=desk?.querySelector('#desk-slider');if(!slider)return;
- const minute=Math.max(0,Number(slider.value)||0);
+ const slider=desk?.querySelector('#desk-slider');
+ const minute=slider?Math.max(0,Number(slider.value)||0):Number(desk.querySelector('#desk-time')?.textContent.replace('T+',''))||0;
  const clock=desk.querySelector('.ops-v7-clock');if(clock)clock.textContent=atLabel(minute);
- const max=Math.max(1,Number(slider.max)||1);
+ const max=Math.max(1,Number(slider?.max)||cachedRun(desk.querySelector('#assessment-run')?.value)?.duration_min||1);
  desk.querySelectorAll('.ops-v7-bookmarks [data-ops-seek]').forEach(el=>el.classList.toggle('is-reached',Number(el.dataset.opsSeek)<=minute+.0001));
  desk.querySelectorAll('.ops-event-v7').forEach(el=>{
    const delta=minute-Number(el.dataset.opsSeek);
@@ -86,16 +86,16 @@ function timeSync(desk){
    el.classList.toggle('is-current',delta>=-.001&&delta<Math.max(.3,max/80));
  });
 }
-function seek(desk,to){const slider=desk.querySelector('#desk-slider');if(!slider)return;const max=Math.max(0,Number(slider.max)||0);slider.value=String(Math.max(0,Math.min(max,Number(to)||0)));slider.dispatchEvent(new Event('input',{bubbles:true}));timeSync(desk);}
+function seek(desk,to){const slider=desk.querySelector('#desk-slider');if(!slider){desk.dispatchEvent(new CustomEvent('assessment-seek',{detail:{minute:Number(to)||0},bubbles:true}));timeSync(desk);return;}const max=Math.max(0,Number(slider.max)||0);slider.value=String(Math.max(0,Math.min(max,Number(to)||0)));slider.dispatchEvent(new Event('input',{bubbles:true}));timeSync(desk);}
 function mount(desk,data,run){
  if(!desk?.isConnected||desk.querySelector('.ops-v7-header')||desk.querySelector('#assessment-run')?.value!==run)return;
- const player=desk.querySelector('.desk-player');if(!player)return;
+ const player=desk.querySelector('.desk-player,.experiment-console');if(!player)return;
  const wrapper=document.createElement('div');wrapper.innerHTML=scaffold(data);
  const board=wrapper.firstElementChild,tools=wrapper.lastElementChild;
- board.dataset.run=run;
+ board.dataset.opsRun=run;
  const eventStrip=desk.querySelector('.desk-event-strip');
  (eventStrip?.parentElement||player.parentElement).insertBefore(board,eventStrip||player);
- player.parentElement.insertBefore(tools,player);
+ if(player.matches('.desk-player'))player.parentElement.insertBefore(tools,player);
  const mapTools=desk.querySelector('.desk-map-layers');
  if(mapTools&&!mapTools.querySelector('[data-ops-inspector]')){
    const toggle=document.createElement('button');toggle.type='button';toggle.className='ops-v7-inspector-toggle';toggle.dataset.opsInspector='true';toggle.setAttribute('aria-controls','desk-inspector');mapTools.append(toggle);
@@ -107,7 +107,7 @@ function mount(desk,data,run){
 function updateInspectorToggle(desk){const el=desk.querySelector('[data-ops-inspector]');if(!el)return;el.textContent=state.inspectorOpen?'隐藏详情':'查看平台详情';el.setAttribute('aria-expanded',String(state.inspectorOpen));}
 function queueCheck(){if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;const desk=station();if(desk)void ensure(desk);});}
 async function ensure(desk){
- const player=desk.querySelector('.desk-player'),run=desk.querySelector('#assessment-run')?.value;
+ const player=desk.querySelector('.desk-player,.experiment-console'),run=desk.querySelector('#assessment-run')?.value;
  if(!run||!player||desk.querySelector('.ops-v7-header')||player.dataset.opsV7Pending===run)return;
  player.dataset.opsV7Pending=run;
  const token={player,run};pendingRequest=token;
@@ -121,7 +121,7 @@ if(typeof document!=='undefined'){
    const desk=button.closest('#assessment');if(!desk)return;
    if(button.hasAttribute('data-ops-seek'))seek(desk,button.dataset.opsSeek);
    else if(button.hasAttribute('data-ops-first-incident')){
-     const data=cachedRun(desk.querySelector('.ops-v7-header')?.dataset.run),first=normalizedEvents(data).find(e=>e.kind==='warning'||e.kind==='failed');
+     const data=cachedRun(desk.querySelector('.ops-v7-header')?.dataset.opsRun),first=normalizedEvents(data).find(e=>e.kind==='warning'||e.kind==='failed');
      if(first)seek(desk,first.at_min);
      else {const filter=desk.querySelector('.ops-v7-filter');if(filter){state.filter='incident';filter.value='incident';eventList(desk);}}
    }else if(button.hasAttribute('data-ops-more')){state.limit+=48;eventList(desk);}
@@ -141,7 +141,7 @@ if(typeof document!=='undefined'){
    if(document.activeElement?.closest('button,a,input,select,textarea,[contenteditable="true"]')||document.querySelector('.modal-shade'))return;
    const shortcuts={' ':'play',ArrowLeft:'previous',ArrowRight:'next',Home:'reset'};
    if(shortcuts[event.key]){event.preventDefault();desk.querySelector(`[data-desk="${shortcuts[event.key]}"]`)?.click();}
-   if(event.key==='End'){event.preventDefault();seek(desk,desk.querySelector('#desk-slider')?.max||0);}
+   if(event.key==='End'){event.preventDefault();seek(desk,desk.querySelector('#desk-slider')?.max||cachedRun(desk.querySelector('#assessment-run')?.value)?.duration_min||0);}
  });
  const observer=new MutationObserver(queueCheck);
  observer.observe(document.body,{childList:true,subtree:true});

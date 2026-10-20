@@ -113,10 +113,14 @@ def telemetry_at(run: dict, plan: dict, minute: float) -> dict:
             'node_id': pos_id, 'completed_tasks': completed, 'failed_tasks': failed,
             'task_count': len(missions), 'progress_pct': round(progress, 1),
         })
+    civil_airdrop = snapshot.get('scenario', {}).get('network_id') == 'civil-airdrop'
+    note_text = ('本场景强制使用合成 XY 坐标；位置来自方案快照与首次迭代事件。速度、载荷及剩余续航均为模型推算。'
+                 if civil_airdrop else
+                 '位置来自方案快照与首次迭代事件；缺少经纬度的历史快照使用相对坐标。速度、载荷及剩余航程均为模型推算。')
     return {'run_id': run['id'], 'minute': round(minute, 2),
             'source': 'first_iteration_synthetic_events', 'vehicles': vehicles,
             'active_count': sum(v['status'] == 'in_transit' for v in vehicles),
-            'position_note': '来自方案快照与首次迭代事件；缺少经纬度的旧快照使用相对坐标。速度、载荷及剩余航程均为模型推算。'}
+            'position_note': note_text}
 
 
 def assessment_projection(run: dict, plan: dict, minute: float = 0) -> dict:
@@ -149,7 +153,7 @@ def assessment_projection(run: dict, plan: dict, minute: float = 0) -> dict:
                       'planned_completed': sum(a['end_min'] <= at for a in records)})
     return {'run_id': run['id'], 'plan_id': plan['id'], 'duration_min': round(duration, 4),
             'total_tasks': total, 'timeline': timeline, 'trend': trend, 'events': events,
-            'network': {k: snapshot.get(k, []) for k in ('nodes', 'edges', 'vehicles')},
+            'network': {k: snapshot.get(k, []) for k in ('nodes', 'edges', 'vehicles')} | {'network_id': snapshot.get('scenario',{}).get('network_id','baseline')},
             'tasks': snapshot.get('tasks', []),
             'shipments': shipment_projection(snapshot.get('tasks',[]),timeline,minute),
             'telemetry': telemetry_at(run, plan, minute),

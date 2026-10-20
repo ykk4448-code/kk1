@@ -24,6 +24,7 @@ export function renderGeoMap(network,city,plan,opts={}){
  el.classList.toggle('mission-focused',Boolean(focus));
  if(camera.city!==city?.id){camera.city=city?.id;camera.basemap=city?.id==='national'?'vector':'streets';}
  const w=el.clientWidth||innerWidth,h=el.clientHeight||innerHeight,padding=mapPadding(w,h,opts);
+ const labHeight=document.querySelector('.experiment-console')?.getBoundingClientRect().height||0;if(labHeight)padding.bottom=Math.max(padding.bottom,labHeight+95);
  const cx=(padding.left+w-padding.right)/2,cy=(padding.top+h-padding.bottom)/2;
  function fit(national=false){
   if(national||opts.home){const fitted=fitGeographic([{lat:3,lon:73},{lat:54,lon:135}],w,h,padding);camera.center=fitted.center;camera.zoom=fitted.zoom;return;}
@@ -101,7 +102,7 @@ export function renderGeoMap(network,city,plan,opts={}){
   const pickup=n.id===assignment?.origin,drop=n.id===assignment?.destination,departure=n.id===view?.departure?.id&&!pickup;
   const endpoint=Boolean(view&&(pickup||drop||departure));
   const displayLabel=shipmentNodes.size?shipmentNodes.has(n.id):!focus||endpoint||n.id===view?.next?.id;
-  let label='';let displayName=city?.id==='national'?n.name.replace(/^[^·]+·/,'').replace(/接驳点|配送中心|综合物流枢纽|物流枢纽|枢纽/g,''):n.name;if(['','城市','首都'].includes(displayName))displayName=n.name.split('·')[0];const text=(view?(drop?'交付 · ':pickup?'取货 · ':departure?'出发 · ':''):'')+displayName,width=labelWidth(text);
+  let label='';let displayName=city?.id==='national'?n.name.replace(/^[^·]+·/,'').replace(/应急空投区/g,'空投区').replace(/接收区/g,'接收区'):n.name;if(['','城市','首都'].includes(displayName))displayName=n.name.split('·')[0];const text=(view?(drop?'交付 · ':pickup?'取货 · ':departure?'出发 · ':''):'')+displayName,width=labelWidth(text);
   if(visible('labels')&&displayLabel){
    const candidates=[{x:x+17,y:y-14},{x:x-width-17,y:y-14},{x:x-width/2,y:y+21},{x:x-width/2,y:y-46},{x:x-width/2,y:y+55},{x:x+17,y:y+17},{x:x-width-17,y:y+17}];
    const box=candidates.find(b=>b.x>padding.left+6&&b.y>padding.top+6&&b.x+width<w-padding.right-12&&b.y+28<h-padding.bottom-6&&!occupied.some(o=>b.x<o.x+o.w+5&&b.x+width+5>o.x&&b.y<o.y+(o.h||28)+5&&b.y+33>o.y));
@@ -127,7 +128,7 @@ export function renderGeoMap(network,city,plan,opts={}){
  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
  // Keep the selected actor connected to the SVG so its position interpolates smoothly.
  if(!svg.querySelector('[data-map-layer="network"]'))svg.innerHTML='<g data-map-layer="network"></g><g data-map-layer="route"></g><g data-map-layer="nodes"></g><g data-map-layer="fleet"></g><g data-map-layer="actor"></g>';
- svg.querySelector('[data-map-layer="network"]').innerHTML=(!geographic&&showNetwork?`<rect class="geo-legacy-frame" x="${legacy.x}" y="${legacy.y}" width="${legacy.w}" height="${legacy.h}" rx="12"/><text class="geo-legacy-title" x="${legacy.x+16}" y="${legacy.y+25}">历史相对拓扑 · 无地理定位</text>`:'')+edgeMarkup;
+ svg.querySelector('[data-map-layer="network"]').innerHTML=(!geographic&&showNetwork?`<rect class="geo-legacy-frame" x="${legacy.x}" y="${legacy.y}" width="${legacy.w}" height="${legacy.h}" rx="12"/><text class="geo-legacy-title" x="${legacy.x+16}" y="${legacy.y+25}">相对位置示意</text>`:'')+edgeMarkup;
  svg.querySelector('[data-map-layer="route"]').innerHTML=routeMarkup;
  svg.querySelector('[data-map-layer="nodes"]').innerHTML=nodeMarkup;
  svg.querySelector('[data-map-layer="fleet"]').innerHTML=units+moving;
@@ -143,14 +144,14 @@ export function renderGeoMap(network,city,plan,opts={}){
   actor.dataset.projection=projection;actor.style.transform=`translate(${x}px,${y}px)`;
  }else actorLayer.innerHTML='';
  el.querySelector('#geo-city-name').textContent=geographic?`${city?.name||'方案快照'} · 行动区域`:`${opts.historical?'方案快照':city?.name||'演示区'} · 合成路网`;
- el.querySelector('#geo-system').textContent=geographic?'地理参考':opts.home?'中国全图':'SYNTHETIC XY';
+ el.querySelector('#geo-system').textContent=geographic?'区域参考':opts.home?'中国全图':'SYNTHETIC XY';
  el.querySelector('#geo-coords').textContent=geographic?`${camera.center[0].toFixed(4)}°N, ${camera.center[1].toFixed(4)}°E · Z${camera.zoom}`:'相对坐标网格 · 不代表真实地理位置';
  el.querySelector('.geo-attribution').hidden=false;
  saved={network,city,plan,opts};
  const redraw=()=>renderGeoMap(saved.network,saved.city,saved.plan,saved.opts);
  const shell=el.closest('.geo-shell'),summary=shell.querySelector('#geo-map-summary'),scopeSelect=shell.querySelector('#geo-route-scope');
  summary.innerHTML=`<b>${nodes.length}</b> 设施 <span>·</span> <b>${edges.length}</b> 通道 <span>·</span> <b>${plan?.assignment_data?.length||0}</b> 任务`;
- scopeSelect.value=focus?'task':scope;scopeSelect.disabled=focus||!catalog.length;scopeSelect.querySelector('[value="vehicle"]').disabled=!opts.selectedVehicle;scopeSelect.querySelector('[value="task"]').disabled=!opts.selectedTask;scopeSelect.querySelector('[value="shipment"]').disabled=!opts.selectedShipment;
+ scopeSelect.value=focus?'task':scope;scopeSelect.disabled=focus||!catalog.length;scopeSelect.querySelector('[value="vehicle"]').disabled=!opts.selectedVehicle;scopeSelect.querySelector('[value="task"]').disabled=!opts.selectedTask;scopeSelect.querySelector('[value="shipment"]').disabled=!opts.selectedShipment;scopeSelect.querySelector('[value="shipment"]').hidden=network?.network_id==='civil-airdrop';
  scopeSelect.onchange=()=>{opts.routeScope=scopeSelect.value;if(opts.onRouteScope)opts.onRouteScope(opts.routeScope);else redraw();};
  shell.querySelector('#geo-route-legend').innerHTML=catalog.map(v=>`<button data-route-key="${esc(v.id)}" class="${opts.selectedVehicle===v.id?'active':''}" style="--route-color:${v.color}" aria-pressed="${opts.selectedVehicle===v.id}" title="查看 ${esc(v.code)} 的 ${v.assignments.length} 项任务"><i></i>${esc(v.code)}<small>${v.assignments.length} 项</small></button>`).join('');
  const selectRoute=(vehicleId,taskId)=>{if(opts.onSelectTask&&taskId){opts.onSelectTask(taskId);return;}if(opts.onSelectVehicle){opts.onSelectVehicle(vehicleId);return;}opts.selectedVehicle=vehicleId;opts.selectedTask=taskId||catalog.find(v=>v.id===vehicleId)?.assignments[0]?.task_id;redraw();};

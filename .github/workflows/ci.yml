@@ -30,6 +30,8 @@ jobs:
           node --test frontend/tests/test_shipments.mjs
           node --check frontend/assets/app.js
           node --check frontend/assets/assessment.js
+          node --check frontend/assets/experiment-console.js
+          node --test frontend/tests/test_experiment_console.mjs
           node --check frontend/assets/routes.js
           node --test frontend/tests/test_routes.mjs
           node --check frontend/assets/mission-view.js
@@ -46,7 +48,7 @@ jobs:
           assert Path('frontend/tests/test_visual_design_browser.py').is_file()
           PY
       - name: Validate mission console UI integration
-        run: pytest frontend/tests/test_mission_console_contract.py frontend/tests/test_mission_v7_contract.py -q
+        run: pytest frontend/tests/test_mission_console_contract.py frontend/tests/test_mission_v7_contract.py frontend/tests/test_civilian_airdrop_contract.py -q
       - name: Validate task route phases and recorded positions
         run: pytest frontend/tests/test_mission_route_state.py -q
       - name: Validate cartographic theme and accessibility
