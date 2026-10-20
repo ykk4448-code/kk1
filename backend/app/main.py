@@ -547,6 +547,7 @@ def create_experiment(body:s.ExperimentIn,db:Session=Depends(get_db),user:m.User
         id='EXP-'+uuid4().hex[:8].upper(),scenario_id=scenario.id,plan_id=plan.id,run_id=run.id,
         name=body.name,notes=body.notes,parameters=params_snapshot,
         results={'metrics':execution['metrics'],'plan_summary':plan_result['summary'],
+                 'strategy':body.strategy,'algorithm':body.algorithm,'model_version':EXPERIMENT_MODEL_VERSION,
                  'seed':body.seed,'iterations':body.iterations,'sample_count':len(execution['samples']),
                  'run_id':run.id,'plan_id':plan.id},
         model_version=EXPERIMENT_MODEL_VERSION,created_by=user.username)
