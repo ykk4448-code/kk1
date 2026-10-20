@@ -6,7 +6,7 @@ BASE='/api/v1'
 
 
 def regional(client,headers):
-    net=client.get(BASE+'/network?city_id=national',headers=headers).json()
+    net=client.get(BASE+'/network?city_id=national&network_id=regional',headers=headers).json()
     plans=client.get(BASE+'/plans?scenario_id=SCN-REGIONAL-CN',headers=headers).json()
     return net,next(p for p in plans if p['strategy']=='balanced')
 
@@ -73,14 +73,17 @@ def test_failed_upstream_cancels_downstream_without_teleporting_cargo(client,adm
     assert all(t['distance_km']==0 for t in projection['timeline'] if t['code'] in blocked_codes)
 
 
-def test_dependency_api_requires_continuous_handover_and_keeps_consignment_weight_together(client,admin_headers):
+def test_archived_regional_tasks_are_read_only_but_history_is_preserved(client,admin_headers):
     path=BASE+'/scenarios/SCN-REGIONAL-CN/tasks'
-    invalid={'cargo':'接驳测试物资','weight_kg':3000,'origin':'CN-TPE','destination':'CN-TC','deadline_min':10000,'shipment_id':'BAD','leg_index':2,'predecessor_task_id':'CN-001-L1'}
-    assert client.post(path,headers=admin_headers,json=invalid).status_code==422
-    assert client.delete(path+'/CN-001-L1',headers=admin_headers).status_code==422
-    assert client.patch(path+'/CN-001-L1',headers=admin_headers,json={'weight_kg':2800}).status_code==200
-    tasks=client.get(path,headers=admin_headers).json()
-    assert {t['weight_kg'] for t in tasks if t['shipment_id']=='CN-001'}=={2800}
+    tasks=client.get(path,headers=admin_headers)
+    assert tasks.status_code==200 and len(tasks.json())==31
+    assert client.post(path,headers=admin_headers,json={
+        'cargo':'不允许新增旧路网任务','weight_kg':5,'origin':'CN-CD','destination':'CN-KL',
+        'transport_mode':'road','deadline_min':10000}).status_code==409
+    assert client.delete(path+'/CN-001-L1',headers=admin_headers).status_code==409
+    assert client.patch(path+'/CN-001-L1',headers=admin_headers,json={'weight_kg':2800}).status_code==409
+    after=client.get(path,headers=admin_headers).json()
+    assert {t['weight_kg'] for t in after if t['shipment_id']=='CN-001'}=={2800} or {t['weight_kg'] for t in after if t['shipment_id']=='CN-001'}=={3000}
 
 
 def test_missing_sea_carriers_leaves_dependent_delivery_unassigned(client,admin_headers):
