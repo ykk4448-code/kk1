@@ -100,7 +100,7 @@ class ScenarioIn(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     description: str = Field(default='', max_length=2000)
     weather: Literal['clear', 'rain', 'wind', 'fog'] = 'clear'
-    wind_kmh: float = Field(default=8, ge=0, le=150)
+    wind_kmh: float = Field(default=8, ge=0, le=60)
     visibility_km: float = Field(default=15, ge=0.1, le=60)
 
 
@@ -108,7 +108,7 @@ class ScenarioPatch(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=100)
     description: str | None = Field(default=None, max_length=2000)
     weather: Literal['clear', 'rain', 'wind', 'fog'] | None = None
-    wind_kmh: float | None = Field(default=None, ge=0, le=150)
+    wind_kmh: float | None = Field(default=None, ge=0, le=60)
     visibility_km: float | None = Field(default=None, ge=0.1, le=60)
 
 
