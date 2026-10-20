@@ -140,7 +140,40 @@ function planningModule(){const tab=S.tabs.planning,p=plan(),summary=p?.summary_
  if(tab==='route'){const options=S.network.nodes.map(n=>`<option value="${n.id}">${txt(n.name)}</option>`).join('');const rd=S.routeData;content=`<div class="workspace-layout">${mapCard('运输路径比选沙盘','跨区域地理节点 · 可视化展示陆海通道与方案路径')}${panel('路径可行性分析','A* / DIJKSTRA · INTERACTIVE QUERY',`<form id="route-form" class="plan-form"><label>起点设施<select name="origin">${S.network.nodes.map(n=>`<option value="${n.id}" ${S.routeFrom===n.id?'selected':''}>${txt(n.name)}</option>`).join('')}</select></label><label>终点设施<select name="destination">${S.network.nodes.map((n,i)=>`<option value="${n.id}" ${S.routeTo===n.id||(!S.routeTo&&i===3)?'selected':''}>${txt(n.name)}</option>`).join('')}</select></label>${select('通路类型','transport_mode',[['multimodal','陆海综合通路'],['road','仅陆运'],['sea','仅海运']])}<label>当前策略 <strong>${names[S.strategy]}</strong> / ${S.algorithm.toUpperCase()}</label><button class="button button-primary full" type="submit">计算路径 →</button></form>${rd?`<div class="route-result"><b>可行路径已找到</b><p>${(rd.transport_modes||[]).map(mode=>names[mode]).join(' → ')}${rd.transport_modes?.includes('sea')?' · 需匹配船舶并安排港口接驳':''}</p><div><span>模拟距离</span><strong>${nfmt(rd.distance_km,2)} km</strong></div><div><span>合成风险因子</span><strong>${nfmt(rd.risk*100,2)}%</strong></div><div><span>经过设施</span><strong>${rd.nodes.length} 处</strong></div><p>${rd.nodes.map(idName).map(txt).join(' → ')}</p></div>`:empty('选择两处设施进行线路分析')}<p class="disclaimer">路径长度按节点连线生成的合成路网计算，并非真实导航行车路线。</p>`,'','plan-controls')}</div>`;}
  if(tab==='archive'){content=panel('历史方案档案','所有规划结果永久保留输入快照，支持重复推演',`<div class="archive-list">${S.plans.map(p=>`<button class="archive-row ${S.planId===p.id?'active':''}" data-plan="${p.id}"><div class="archive-icon">${icon('route',21)}</div><div><b>${txt(p.name)}</b><small>${txt(p.id)} · ${p.strategy.toUpperCase()} / ${p.algorithm.toUpperCase()}</small></div><span>${p.summary_data.assigned_count}/${p.summary_data.task_count} 项完成</span><span class="mono">${new Date(p.created_at).toLocaleString('zh-CN')}</span><span>→</span></button>`).join('')}</div>`)+panel('选中方案任务','关联任务记录',scheduleTable(),action('开始行动推演','go-simulation','primary'));}
  return `${heading('03 / MISSION PLANNING','联合投送方案','以运输节点网络为基础进行跨平台任务调度，支持路径求解、任务分配、方案比选与可追溯档案。',scenarioPicker())}${stats([['编排任务',S.tasks.length,'项','选中想定任务总数','target'],['已分配任务',summary.assigned_count??'—','项','当前选择方案','check'],['预计总里程',summary.distance_km??'—','km','合成规划路网','route'],['预计完成时间',summary.makespan_min??'—','min','计划最迟结束','clock']])}${tabs()}${content}`;}
-function runPanel(){const r=run(),end=Math.max(1,...(r?.events||[]).map(e=>e.at_min));return `<div class="run-panel"><div class="run-commands"><div><div class="overline">REPLAY CONTROL</div><strong>${r?txt(r.id):'等待推演数据'}</strong></div><span class="mono">T+ ${nfmt(S.playMinute,1)} / ${nfmt(end,1)} min</span></div><div class="run-slider"><button data-act="playback" class="round-play" aria-label="播放或暂停">${S.play?'Ⅱ':'▶'}</button><input type="range" id="play-slider" min="0" max="${end}" value="${S.playMinute}" step=".01" aria-label="推演播放进度"><button class="button button-small" data-act="replay-reset">↺ 复位</button><button class="button button-small" data-act="speed">${S.playSpeed}×</button></div><div class="run-info"><span>01 / TASK DISPATCH</span><span>02 / IN-TRANSIT</span><span>03 / DELIVERY</span></div></div>`;}
+const AIRDROP_EXPERIMENT_OPTIONS={
+ weather:[['clear','晴朗'],['rain','降雨'],['wind','有风'],['fog','低能见度']],
+ wind:[['calm','微风'],['moderate','中等'],['strong','较强']],
+ rain:[['none','无降雨'],['light','小雨'],['moderate','中雨']],
+ cloud:[['high','较高'],['medium','中等'],['low','较低']],
+ sea:[['calm','平稳'],['moderate','轻浪'],['rough','较大涌浪']],
+ payload:[['light','轻载'],['standard','标准载荷'],['medical','医疗物资']],
+ altitude:[['conservative','保守'],['standard','标准'],['high','较高']],
+ reserve:[['20','20%'],['30','30%'],['40','40%']]
+};
+const AIRDROP_EXPERIMENT_KEY='aether-civil-airdrop-experiment-v1';
+function loadAirdropExperimentPreset(){
+ const preset={weather:'clear',wind:'calm',rain:'none',cloud:'high',sea:'calm',payload:'standard',altitude:'conservative',reserve:'30'};
+ try{const saved=JSON.parse(localStorage.getItem(AIRDROP_EXPERIMENT_KEY)||'null');if(saved&&typeof saved==='object')for(const key of Object.keys(AIRDROP_EXPERIMENT_OPTIONS)){if(AIRDROP_EXPERIMENT_OPTIONS[key].some(([value])=>value===saved[key]))preset[key]=saved[key];}}catch{}
+ return preset;
+}
+function airdropExperimentSelect(preset,key,label){
+ return `<label class="run-exp-control"><span>${label}</span><select data-exp-var="${key}" aria-label="${label}">${AIRDROP_EXPERIMENT_OPTIONS[key].map(([value,title])=>`<option value="${value}" ${preset[key]===value?'selected':''}>${title}</option>`).join('')}</select></label>`;
+}
+function runPanel(){
+ const r=run(),end=Math.max(1,...(r?.events||[]).map(e=>e.at_min)),preset=loadAirdropExperimentPreset();
+ return `<div class="run-panel">
+  <div class="run-commands"><div><div class="overline">SIMULATION REPLAY</div><strong>${r?txt(r.id):'等待推演数据'}</strong></div><span class="mono">T+ ${nfmt(S.playMinute,1)} / ${nfmt(end,1)} min</span></div>
+  <div class="run-exp-toolbar">
+   <div class="run-exp-playback"><button data-act="playback" class="round-play" aria-label="播放或暂停">${S.play?'Ⅱ':'▶'}</button><button class="button button-small" data-act="replay-reset">↺ 复位</button><button class="button button-small" data-act="speed">${S.playSpeed}×</button></div>
+   <form id="airdrop-experiment-form" class="run-experiment-form" aria-label="民用应急空投实验变量">
+    ${airdropExperimentSelect(preset,'weather','天气')}${airdropExperimentSelect(preset,'wind','风场')}${airdropExperimentSelect(preset,'rain','降雨')}${airdropExperimentSelect(preset,'cloud','云底')}${airdropExperimentSelect(preset,'sea','海况')}${airdropExperimentSelect(preset,'payload','载荷')}${airdropExperimentSelect(preset,'altitude','飞行高度')}${airdropExperimentSelect(preset,'reserve','电量余量')}
+    <button type="button" class="button button-primary run-exp-save" data-act="save-airdrop-preset">保存变量预设</button>
+   </form>
+  </div>
+  <p class="run-exp-note">仅保存民用应急实验的本地变量预设，不改变已保存的历史推演或真实飞行航线。</p>
+  <div class="run-info"><span>01 / 任务准备</span><span>02 / 空中投送</span><span>03 / 安全返航</span></div>
+ </div>`;
+}
 const operationStatus={standby:'等待任务',in_transit:'投送途中',delivered:'已完成',failed:'任务中断',unavailable:'不可用'};
 async function loadTelemetry(){
  const id=S.runId,minute=S.playMinute,ticket=++S.telemetryTicket;
@@ -245,6 +278,13 @@ async function doAction(act,el){if(act==='close-modal'){hideDialog();return;}if(
  if(act==='vehicle-toggle'){const v=S.network.vehicles.find(v=>v.id===el.dataset.id);await patch(`/vehicles/${v.id}`,{status:v.status==='available'?'maintenance':'available'});await refresh();render();return;}
  if(act==='go-conditions'){selectTab('conditions');return;}if(act==='go-tasks'){selectTab('tasks');return;}if(act==='go-formations'){selectTab('formations');return;}
  if(act==='generate'){await generate();return;}if(act==='go-simulation'){setPage('simulation');return;}
+ if(act==='save-airdrop-preset'){
+  const form=root.querySelector('#airdrop-experiment-form');if(!form)return;
+  const preset={};form.querySelectorAll('[data-exp-var]').forEach(input=>{preset[input.dataset.expVar]=input.value;});
+  try{localStorage.setItem(AIRDROP_EXPERIMENT_KEY,JSON.stringify(preset));alertUser('变量预设已保存到当前浏览器；历史推演未修改。');}
+  catch{alertUser('浏览器未允许本地保存，请检查隐私设置。',true);}
+  return;
+ }
  if(act==='playback'){S.play=!S.play;play();render();await loadTelemetry();return;}
  if(act==='replay-reset'){S.play=false;stopPlayback();S.playMinute=0;render();await loadTelemetry();return;}
  if(act==='speed'){S.playSpeed=S.playSpeed===1?2:S.playSpeed===2?4:1;render();return;}
