@@ -190,9 +190,43 @@ function telemetryTable(){const arr=S.telemetry?.vehicles||[];
  return arr.length?`<div class="telemetry-summary"><span><i class="signal-dot"></i> T+ ${nfmt(S.telemetry.minute,1)} min</span><strong>${S.telemetry.active_count} 台执行中 / ${arr.length} 台部署</strong><small>合成事件推算 · 非真实遥测</small></div><div class="table-wrap"><table><thead><tr><th>平台编号</th><th>推演位置</th><th>当前速度</th><th>剩余航程</th><th>当前载荷</th><th>装载物资</th><th>运行状态</th><th>预计剩余时间</th></tr></thead><tbody>${arr.map(x=>`<tr><td><b>${txt(x.code)}</b><small>${txt(x.mission_code||'未分配')}</small></td><td>${x.lat==null?'—':`<span class="mono">${nfmt(x.lat,4)}°N<br>${nfmt(x.lon,4)}°E</span>`}</td><td>${nfmt(x.current_speed_kmh,1)} km/h</td><td>${nfmt(x.remaining_range_km,1)} km</td><td>${nfmt(x.current_load_kg,1)} kg</td><td>${txt(x.cargo||'—')}</td><td>${badge(operationStatus[x.status]||x.status,x.status==='in_transit'?'brand':x.status==='delivered'?'success':'normal')}</td><td>${x.eta_min==null?'—':nfmt(x.eta_min,1)+' min'}</td></tr>`).join('')}</tbody></table></div>`:empty('请选择一条推演记录，查看逐车状态');}
 function replayTelemetry(){return panel('平台状态实时视图','SIMULATED FLEET TELEMETRY · FIRST ITERATION',`<div id="telemetry-live">${telemetryTable()}</div>`);}
 function eventTable(){const r=run();return (r?.events?.length)?`<div class="event-feed">${r.events.filter(e=>(S.tabs.simulation!=='control'||e.at_min<=S.playMinute)&&(S.eventFilter==='all'||e.kind===S.eventFilter)&&(!S.eventText||(e.message+' '+(e.code||'')+' '+(e.vehicle||'')).toLowerCase().includes(S.eventText.toLowerCase()))).slice(0,200).map(e=>`<div class="event-row"><div class="event-time">T+${nfmt(e.at_min,1)}</div><span class="event-indicator ${e.level}"></span><div><strong>${txt(e.message)}</strong><small>${txt(e.vehicle||e.code||'SYSTEM')} · ${e.kind.toUpperCase()}</small></div></div>`).join('')}</div>`:empty('暂无推演事件，请运行或选择历史推演');}
+function experimentsWorkspace(){
+ const records=S.experiments||[];
+ const form='<form id="experiment-form" class="civil-experiment-form">'+
+  '<div class="experiment-form-grid">'+
+  '<label>实验名称<input name="name" maxlength="120" required value="民用应急空投实验"></label>'+
+  '<label>天气<select name="weather"><option value="clear">晴朗</option><option value="rain">降雨</option><option value="wind">有风</option><option value="fog">低能见度</option></select></label>'+
+  '<label>风速（模型输入）<input name="wind_kmh" type="number" min="0" max="60" step="1" value="8" required></label>'+
+  '<label>降雨强度<select name="rain"><option value="none">无</option><option value="light">小雨</option><option value="moderate">中雨</option></select></label>'+
+  '<label>云底情景<select name="cloud_base"><option value="high">较高</option><option value="medium">中等</option><option value="low">较低</option></select></label>'+
+  '<label>海况情景<select name="sea_state"><option value="calm">平稳</option><option value="moderate">中等</option><option value="rough">较大涌浪</option></select></label>'+
+  '<label>物资载荷类型<select name="payload_profile"><option value="light">轻载物资</option><option value="standard" selected>标准物资</option><option value="medical">医疗物资</option></select></label>'+
+  '<label>飞行剖面假设<select name="altitude_profile"><option value="conservative">保守</option><option value="standard" selected>标准</option><option value="high">较高</option></select></label>'+
+  '<label>电量预留<select name="battery_reserve_pct"><option value="20">20%</option><option value="30" selected>30%</option><option value="40">40%</option></select></label>'+
+  '<label>规划策略<select name="strategy"><option value="balanced">综合均衡</option><option value="fastest">时效优先</option><option value="safest">稳健策略</option></select></label>'+
+  '<label>路径算法<select name="algorithm"><option value="astar">A*</option><option value="dijkstra">Dijkstra</option></select></label>'+
+  '<label>随机种子<input name="seed" type="number" min="0" max="2147483647" value="'+S.seed+'" required></label>'+
+  '<label>迭代轮数<input name="iterations" type="number" min="1" max="500" value="'+S.iterations+'" required></label>'+
+  '</div><label>实验备注<textarea name="notes" rows="2" maxlength="2000" placeholder="记录假设、对照目的或观察结论"></textarea></label>'+
+  '<p class="run-exp-note">参数将参与空投方案评分与多轮扰动计算。模型是教学用粗粒度假设，不是飞行性能预测或安全认证。</p>'+
+  '<button class="button button-primary" type="submit">运行并保存实验记录 →</button></form>';
+ const rows=records.map(function(x){
+  const q=x.parameters||{},m=(x.results||{}).metrics||{};
+  const weather={clear:'晴朗',rain:'降雨',wind:'有风',fog:'低能见度'}[q.weather]||q.weather||'—';
+  const rain={none:'无雨',light:'小雨',moderate:'中雨'}[q.rain]||q.rain||'—';
+  return '<tr><td><b>'+txt(x.name)+'</b><small class="mono">'+txt(x.id)+' · '+txt(x.model_version)+'</small>'+(x.notes?'<small>'+txt(x.notes)+'</small>':'')+'</td>'+
+   '<td>'+new Date(x.created_at).toLocaleString('zh-CN')+'</td>'+
+   '<td>'+txt(weather)+' · 风 '+nfmt(q.wind_kmh,0)+' · '+txt(rain)+'<small>海况 '+txt(q.sea_state)+' · 载荷 '+txt(q.payload_profile)+' · 余量 '+txt(q.battery_reserve_pct)+'%</small></td>'+
+   '<td>'+(x.results?.iterations??'—')+' / '+(x.results?.seed??'—')+'</td>'+
+   '<td>'+nfmt(m.success_pct,1)+'%</td><td>'+nfmt(m.on_time_pct,1)+'%</td><td>'+nfmt(m.score,1)+'</td>'+
+   '<td>'+action('打开回放','view-experiment','small','data-id="'+txt(x.id)+'"')+' '+action('导出 JSON','export-experiment','small','data-id="'+txt(x.id)+'"')+'</td></tr>';
+ }).join('');
+ const table=records.length?'<div class="table-wrap"><table><thead><tr><th>实验名称 / 编号</th><th>创建时间</th><th>环境与变量</th><th>轮次 / 种子</th><th>成功率</th><th>准点率</th><th>评分</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></div>':empty('还没有实验记录；提交上方参数即可生成第一条记录。');
+ return panel('新建可复现实验','参数快照 · 随机种子 · 多轮结果',form)+panel('历史实验记录','每次运行单独保存；修改参数不会覆盖已有记录',table,action('刷新记录','refresh-experiments','light'));
+}
 function simulationModule(){const tab=S.tabs.simulation,r=run();let content='';
- if(tab==='control')return `${heading('04 / ACTION SIMULATION','行动推演','查看任务推进过程，沿时间轴联动任务、地图与平台状态。',scenarioPicker())}${tabs()}<details class="run-setup"><summary title="新建多轮推演">${icon('settings',15)} 新建多轮推演 <span>选择方案 / 随机种子 / 轮次</span></summary><form id="simulation-form" class="setup-inline"><label>规划方案<select name="plan_id" required>${S.plans.map(p=>`<option value="${p.id}" ${p.id===S.planId?'selected':''}>${txt(p.name)}</option>`).join('')}</select></label><label>随机种子<input name="seed" type="number" min="0" max="2147483647" value="${S.seed}" required></label><label>迭代轮次<input name="iterations" type="number" min="1" max="500" value="${S.iterations}" required></label><button type="submit" class="button button-primary" ${S.plans.length?'':'disabled'}>运行仿真 →</button></form></details>${assessmentMarkup(deskContext())}`;
-
+ if(tab==='control')return heading('04 / CIVIL AID SIMULATION','民用空投仿真','底部环境变量栏可直接启动新实验；每次运行都会保存参数快照、随机种子、结果指标与事件记录。',scenarioPicker())+tabs()+'<div class="experiment-intro"><b>实验约定</b><span>合成坐标与抽象距离单位，不代表真实航线；新实验独立存档，不覆盖历史结果。</span>'+action('查看实验记录','show-experiments','light')+'</div>'+assessmentMarkup(deskContext());
+ if(tab==='experiments')return heading('04 / EXPERIMENT RECORDS','实验记录','每条记录绑定不可变参数快照、仿真运行、结果指标与模型版本。',scenarioPicker())+tabs()+experimentsWorkspace();
  if(tab==='control')content=`<div class="workspace-layout">${mapCard('城市行动推演沙盘','地理位置与模拟平台事件回放 / 并非实时车辆定位')}${panel('推演参数配置','MONTE CARLO · DETERMINISTIC SEED',`<form id="simulation-form" class="plan-form"><label>使用的方案<select name="plan_id">${S.plans.map(p=>`<option value="${p.id}" ${S.planId===p.id?'selected':''}>${txt(p.name)}</option>`).join('')}</select></label><div class="form-pair"><label>随机种子<input name="seed" type="number" min="0" max="2147483647" value="${S.seed}" required></label><label>推演次数<input name="iterations" type="number" min="1" max="500" value="${S.iterations}" required></label></div><div class="formula-note"><span>仿真引擎</span><p>多轮随机扰动 / 投送准点率 / 任务成功率 / 偶发事件</p></div><button type="submit" class="button button-primary full">开始多轮仿真 →</button></form>`,'','plan-controls')}</div>${panel('动态运行回放','逐时推进 · 事件级可追踪',runPanel())}${replayTelemetry()}${panel('当前事件流水','最近一轮模拟记录',eventTable())}`;
  if(tab==='telemetry')content=`${panel('逐车任务状态回放','拖动时间轴，查看运输平台的推演位置与状态',runPanel())}${replayTelemetry()}${mapCard('平台部署与运动轨迹','当前想定地理底图 · 推演位置为模拟数据')}`;
  if(tab==='events')content=panel('全部推演事件日志','DISPATCH / POSITION / INCIDENT / ARRIVAL',`<div class="event-tools"><label>事件类型<select id="event-filter">${[['all','全部事件'],['dispatch','任务派遣'],['position','位置更新'],['warning','风险告警'],['arrived','到达交付'],['failed','任务中断']].map(([key,title])=>`<option value="${key}" ${S.eventFilter===key?'selected':''}>${title}</option>`).join('')}</select></label><label>搜索事件<input id="event-text" value="${txt(S.eventText)}" placeholder="输入任务 / 平台编号"></label></div>${eventTable()}`);
