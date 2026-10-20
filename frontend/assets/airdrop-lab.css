@@ -1,0 +1,39 @@
+/* Civilian emergency airdrop experiment ribbon: replaces the bottom replay scrubber. */
+.desk-experiment-ribbon{
+ position:fixed;left:24px;right:24px;bottom:23px;z-index:22;
+ display:flex;flex-direction:column;gap:7px;padding:8px 12px;
+ background:#fffffff5;border:1px solid #cbdde7;border-radius:7px;
+ box-shadow:0 3px 16px #264c6a0b;pointer-events:auto;color:#24475e;
+}
+.experiment-ribbon-top{display:flex;align-items:center;gap:12px;min-width:0}
+.experiment-ribbon-brand{display:flex;flex-direction:column;gap:2px;min-width:148px}
+.experiment-ribbon-brand b{font-size:12px;color:#214e6d}
+.experiment-ribbon-brand small{font-size:9px;color:#71899a;white-space:nowrap}
+.experiment-ribbon-playback{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.experiment-ribbon-playback .desk-play{width:25px;height:25px;border:0;border-radius:5px;background:#286b94;color:white;font-size:11px;flex-shrink:0}
+.experiment-ribbon-playback .player-step{background:none;border:0;color:#47738d;font-size:11px;padding:4px;min-width:18px}
+.experiment-ribbon-playback>.mono{font-size:10px;color:#54758a;white-space:nowrap}
+.experiment-ribbon-playback .speed-label{display:flex;align-items:center;gap:4px;font-size:9px;color:#6b8494;white-space:nowrap}
+.experiment-ribbon-playback #desk-speed{height:25px;max-width:76px;padding:2px 4px;font-size:10px}
+.experiment-ribbon-status{margin-left:auto;font-size:9px;color:#748b9a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.experiment-ribbon-status.is-saved{color:#23816e}
+.experiment-ribbon-controls{display:flex;align-items:center;gap:7px;min-width:0;overflow-x:auto;padding-bottom:1px;scrollbar-width:thin}
+.experiment-ribbon-controls .exp-control{display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:10px;color:#557589}
+.experiment-ribbon-controls .exp-control select{width:86px;min-width:74px;height:26px;padding:3px 5px;font-size:10px;background:#f8fbfd;border:1px solid #cddde7;border-radius:4px;color:#294f67}
+.experiment-ribbon-controls .experiment-save{flex-shrink:0;min-height:27px;padding:5px 10px;font-size:10px;white-space:nowrap}
+.workspace-has-assessment .desk-experiment-ribbon{position:fixed!important;left:24px;right:24px;bottom:23px;z-index:22}
+.workspace-has-assessment .desk-event-strip{bottom:2px!important}
+@media(max-width:1150px){
+ .desk-experiment-ribbon{left:12px;right:12px;bottom:24px;padding:7px 9px;gap:6px}
+ .experiment-ribbon-top{flex-wrap:wrap;gap:7px}
+ .experiment-ribbon-brand{min-width:125px}
+ .experiment-ribbon-status{flex-basis:100%;margin-left:0}
+ .experiment-ribbon-controls{flex-wrap:wrap;overflow:visible}
+ .experiment-ribbon-controls .exp-control{flex:1 1 115px;justify-content:space-between}
+ .experiment-ribbon-controls .exp-control select{flex:1;width:auto}
+}
+@media(max-width:640px){
+ .desk-experiment-ribbon{max-height:44vh;overflow:auto}
+ .experiment-ribbon-playback{flex-wrap:wrap}
+ .experiment-ribbon-brand{flex-basis:100%}
+}
