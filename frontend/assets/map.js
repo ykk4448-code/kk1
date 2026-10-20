@@ -15,7 +15,8 @@ export function geoMapMarkup(){return `<div class="geo-shell">
 export function renderGeoMap(network,city,plan,opts={}){
  const el=document.getElementById('geo-map');if(!el)return;
  const nodes=network?.nodes||[],edges=network?.edges||[],fleet=network?.vehicles||[];
- const geographic=nodes.length>0&&nodes.every(n=>Number.isFinite(n.lat)&&Number.isFinite(n.lon))&&new Set(nodes.map(n=>`${n.lat},${n.lon}`)).size>1;
+ const civilAirdrop=network?.network_id==='civil-airdrop';
+ const geographic=!civilAirdrop&&nodes.length>0&&nodes.every(n=>Number.isFinite(n.lat)&&Number.isFinite(n.lon))&&new Set(nodes.map(n=>`${n.lat},${n.lon}`)).size>1;
  const shipmentAssignments=opts.routeScope==='shipment'?(plan?.assignment_data||[]).filter(a=>a.shipment_id===opts.selectedShipment):[];
  const shipmentNodes=new Set(shipmentAssignments.flatMap(a=>a.path_nodes.slice(Math.max(0,(a.reposition_nodes?.length||1)-1))));
  const shipmentVehicles=new Set(shipmentAssignments.map(a=>a.vehicle_id));
@@ -142,10 +143,10 @@ export function renderGeoMap(network,city,plan,opts={}){
   actor.style.transition=opts.animate&&actor.dataset.projection===projection?'transform 460ms linear':'none';
   actor.dataset.projection=projection;actor.style.transform=`translate(${x}px,${y}px)`;
  }else actorLayer.innerHTML='';
- el.querySelector('#geo-city-name').textContent=geographic?`${city?.name||'方案快照'} · 行动区域`:`${opts.historical?'方案快照':city?.name||'演示区'} · 合成路网`;
+ el.querySelector('#geo-city-name').textContent=civilAirdrop?'民用空投场景 · 合成 XY':geographic?`${city?.name||'方案快照'} · 行动区域`:`${opts.historical?'方案快照':city?.name||'演示区'} · 合成路网`;
  el.querySelector('#geo-system').textContent=geographic?'地理参考':opts.home?'中国全图':'SYNTHETIC XY';
  el.querySelector('#geo-coords').textContent=geographic?`${camera.center[0].toFixed(4)}°N, ${camera.center[1].toFixed(4)}°E · Z${camera.zoom}`:'相对坐标网格 · 不代表真实地理位置';
- el.querySelector('.geo-attribution').hidden=false;
+ el.querySelector('.geo-attribution').hidden=civilAirdrop;
  saved={network,city,plan,opts};
  const redraw=()=>renderGeoMap(saved.network,saved.city,saved.plan,saved.opts);
  const shell=el.closest('.geo-shell'),summary=shell.querySelector('#geo-map-summary'),scopeSelect=shell.querySelector('#geo-route-scope');
