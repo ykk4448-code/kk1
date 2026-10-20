@@ -77,13 +77,14 @@ def test_archived_regional_tasks_are_read_only_but_history_is_preserved(client,a
     path=BASE+'/scenarios/SCN-REGIONAL-CN/tasks'
     tasks=client.get(path,headers=admin_headers)
     assert tasks.status_code==200 and len(tasks.json())==31
+    before={t['id']:t['weight_kg'] for t in tasks.json()}
     assert client.post(path,headers=admin_headers,json={
         'cargo':'不允许新增旧路网任务','weight_kg':5,'origin':'CN-CD','destination':'CN-KL',
         'transport_mode':'road','deadline_min':10000}).status_code==409
     assert client.delete(path+'/CN-001-L1',headers=admin_headers).status_code==409
     assert client.patch(path+'/CN-001-L1',headers=admin_headers,json={'weight_kg':2800}).status_code==409
     after=client.get(path,headers=admin_headers).json()
-    assert {t['weight_kg'] for t in after if t['shipment_id']=='CN-001'}=={2800} or {t['weight_kg'] for t in after if t['shipment_id']=='CN-001'}=={3000}
+    assert {t['id']:t['weight_kg'] for t in after}==before
 
 
 def test_missing_sea_carriers_leaves_dependent_delivery_unassigned(client,admin_headers):
