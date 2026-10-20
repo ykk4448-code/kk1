@@ -21,6 +21,7 @@ def test_navigation_and_task_forms_use_civilian_airdrop_language():
     assert "AIR-MAIN-" in task_form and "AIR-ISLE-" in task_form
     assert "前置空投任务" not in task_form
     assert "task?.deadline_min||150" in task_form
+    assert "03 / 结果复盘" in APP and "安全返航" not in APP
 
 
 def test_experiment_controls_create_and_export_server_records():
