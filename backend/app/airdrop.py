@@ -79,5 +79,6 @@ def parameter_summary(raw=None):
         'altitude_profile': p['altitude_profile'],
         'battery_reserve_pct': p['battery_reserve_pct'],
         'model_version': EXPERIMENT_MODEL_VERSION,
+        'model_factors': environmental_factors(p),
         'disclaimer': '合成民用应急仿真；距离为抽象模型单位，所有环境因子为教学假设，不代表实际航线、飞行性能或安全认证。',
     }
