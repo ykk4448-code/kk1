@@ -138,6 +138,8 @@ def test_experiment_records_are_reproducible_and_linked(client,admin_headers):
     a,b=first.json(),second.json()
     assert a['id']!=b['id'] and a['run_id']!=b['run_id'] and a['plan_id']!=b['plan_id']
     assert a['parameters']==b['parameters']
+    assert a['results']['strategy']=='balanced' and a['results']['algorithm']=='astar'
+    assert a['results']['model_version']==a['model_version']
     assert a['results']['metrics']==b['results']['metrics']
     assert a['results']['plan_summary']==b['results']['plan_summary']
     run_a=client.get(BASE+f"/simulations/{a['run_id']}",headers=h).json()
@@ -165,6 +167,8 @@ def test_environment_parameters_change_model_and_are_snapshotted(client,admin_he
     assert record['parameters']['battery_reserve_pct']==40
     assert record['parameters']['model_version']==record['model_version']
     assert record['parameters']['disclaimer']
+    assert record['parameters']['model_factors']['range_factor']<1
+    assert record['results']['strategy']=='balanced' and record['results']['algorithm']=='astar'
     assert record['results']['plan_summary']['assigned_count']==0
     assert record['results']['plan_summary']['unassigned_count']==6
     assert record['results']['iterations']==4 and record['results']['seed']==12
