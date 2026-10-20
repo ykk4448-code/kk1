@@ -16,7 +16,7 @@ export function assessmentMarkup(context){
   <div class="assessment-toolbar"><div class="desk-title"><span class="desk-symbol">${icon('chart',19)}</span><div><strong>任务综合评估工作台</strong><small>时序 · 空间 · 运力 · 结果同步分析</small></div></div>
    <div class="desk-actions"><label>推演记录<select id="assessment-run" aria-label="选择评估运行">${runs.map(r=>`<option value="${safe(r.id)}" ${r.id===context.run?.id?'selected':''}>${safe(r.id)} · ${r.iterations} 轮</option>`).join('')||'<option>暂无推演记录</option>'}</select></label><button class="button button-light" data-desk="csv" ${runs.length?'':'disabled'}>${icon('download',15)} 导出结果</button><button class="icon-button" data-desk="fullscreen" aria-label="全屏评估工作台" title="全屏评估工作台">⛶</button></div>
   </div>
-  ${context.denseScenario&&context.scenarioId!==context.denseScenario.id?`<div class="desk-data-note"><span>历史相对坐标快照 · ${context.plan?.snapshot_data?.nodes?.length||0} 设施 / ${context.plan?.snapshot_data?.edges?.length||0} 通道</span><button data-desk="dense">查看合成 XY 示意 →</button></div>`:''}
+  ${context.denseScenario&&context.scenarioId!==context.denseScenario.id?`<div class="desk-data-note"><span>历史相对坐标快照 · ${context.plan?.snapshot_data?.nodes?.length||0} 设施 / ${context.plan?.snapshot_data?.edges?.length||0} 通道</span><button data-desk="dense">切换真实地理场景 →</button></div>`:''}
   <div id="desk-content"><div class="desk-loading" role="status"><span class="loading-spinner"></span>正在读取任务快照与推演证据…</div></div>
  </section>`;
 }
@@ -25,24 +25,6 @@ export function mountAssessment(context){
  const el=document.getElementById('assessment');if(!el)return {destroy(){}};
  const controller=new AbortController();const options={signal:controller.signal};
  let disposed=false,data=null,telemetry=null,selected='',selectedTask='',mapMode='overview',routeScope='all',filter='all',query='',minute=context.minute||0,playing=false,speed=4,timer=0,pending=0,ticket=0,lastError='',layers={facilities:true,links:true,formations:true,routes:true,labels:true};
- const experimentOptions={
-  weather:[['clear','晴朗'],['rain','降雨'],['wind','有风'],['fog','低能见度']],
-  wind_kmh:[['5','5 km/h'],['8','8 km/h'],['15','15 km/h'],['25','25 km/h'],['40','40 km/h'],['55','55 km/h']],
-  rain:[['none','无降雨'],['light','小雨'],['moderate','中雨']],
-  cloud_base:[['high','较高'],['medium','中等'],['low','较低']],
-  sea_state:[['calm','平稳'],['moderate','中等'],['rough','较大涌浪']],
-  payload_profile:[['light','轻载物资'],['standard','标准物资'],['medical','医疗物资']],
-  altitude_profile:[['conservative','保守'],['standard','标准'],['high','较高']],
-  battery_reserve_pct:[['20','20%'],['30','30%'],['40','40%']]
- };
- const experimentVars={weather:'clear',wind_kmh:'8',rain:'none',cloud_base:'high',sea_state:'calm',payload_profile:'standard',altitude_profile:'standard',battery_reserve_pct:'30'};
- try{
-  const saved=JSON.parse(localStorage.getItem('aether-civil-airdrop-experiment-v1')||'null');
-  if(saved&&typeof saved==='object')for(const key of Object.keys(experimentOptions)){
-   if(experimentOptions[key].some(([value])=>value===saved[key]))experimentVars[key]=saved[key];
-  }
- }catch{}
-
  const $=q=>el.querySelector(q);
  const revealMission=()=>{if(!context.sharedMap||innerWidth<=1150)return;document.body.classList.remove('workspace-show-events','workspace-show-fleet','workspace-show-shipments');document.body.classList.add('workspace-show-inspector');document.querySelectorAll('[data-workspace-tool=inspector],[data-workspace-tool=events],[data-workspace-tool=fleet]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.workspaceTool==='inspector')));};
  const regional=context.city?.id==='national';if(regional)speed=128;
@@ -75,14 +57,10 @@ export function mountAssessment(context){
  function inspector(){
   const v=currentVehicle(),mission=selectedMission();
   if(!v)return '<div class="desk-empty">选择平台查看状态</div>';
-  const civilAirdrop=data.network?.network_id==='civil-airdrop';
-  const speedUnit=civilAirdrop?'模型单位/h':'km/h';
-  const rangeUnit=civilAirdrop?'模型单位':'km';
-  const rangeLabel=civilAirdrop?'剩余模型续航':'剩余模拟航程';
-  const position=v.coordinate_system==='wgs84'?`${fmt(v.lon,4)}°E<br>${fmt(v.lat,4)}°N`:`X ${fmt(v.x,1)} / Y ${fmt(v.y,1)}<small>${civilAirdrop?'合成相对坐标':'历史相对坐标'}</small>`;
-  return `<div class="inspector-identity"><span class="vehicle-glyph">${icon(v.category==='ship'?'ship':v.category==='drone'?'target':'truck',26)}</span><div><b>${safe(v.code)}</b><small>${v.category==='ship'?'运输货船':v.category==='truck'?'干线货车':v.category==='drone'?'无人航空平台':'无人地面平台'}</small></div><span class="state-pill ${v.status}">${stateNames[v.status]||safe(v.status)}</span></div><div class="inspector-position"><span>${civilAirdrop?'合成位置':'推演位置'}</span><b class="mono">${position}</b></div><div class="inspector-metrics"><div><span>当前速度</span><b>${fmt(v.current_speed_kmh)}<small> ${speedUnit}</small></b></div><div><span>配置载荷</span><b>${fmt(v.current_load_kg)}<small> kg</small></b></div></div><div class="range-status"><div><span>${rangeLabel}</span><b>${fmt(v.remaining_range_km)} ${rangeUnit}</b></div><div class="range-track"><i style="width:${v.range_remaining_pct}%"></i></div><small>${fmt(v.range_remaining_pct,0)}% · 由计划里程推算</small></div><dl class="inspector-facts"><div><dt>当前任务</dt><dd>${safe(v.mission_code||'尚未派遣')}</dd></div><div><dt>装载物资</dt><dd>${safe(v.cargo||'未装载')}</dd></div><div><dt>预计剩余</dt><dd>${v.eta_min==null?'—':fmt(v.eta_min)+' min'}</dd></div><div><dt>任务进度</dt><dd>${fmt(v.progress_pct,0)}%</dd></div><div><dt>已交付 / 分配</dt><dd>${v.completed_tasks} / ${v.task_count}</dd></div></dl>${mission?`<div class="selected-mission"><small>选中任务 · ${safe(mission.code)}</small><b>${safe(mission.cargo)}</b><p>${safe(nodeName(mission.origin))} → ${safe(nodeName(mission.destination))}</p><div>计划 ${clock(mission.start_min)} — ${clock(mission.end_min)}</div><div>截止 ${clock(mission.deadline_min)} · ${fmt(mission.weight_kg)} kg</div></div>`:''}<p class="inspector-footnote">平台状态由首次迭代事件推算，不是实际设备传感数据。</p>`;
+  const position=v.coordinate_system==='wgs84'?`${fmt(v.lon,4)}°E<br>${fmt(v.lat,4)}°N`:`X ${fmt(v.x,1)} / Y ${fmt(v.y,1)}<small>历史相对坐标</small>`;
+  return `<div class="inspector-identity"><span class="vehicle-glyph">${icon(v.category==='ship'?'ship':v.category==='drone'?'target':'truck',26)}</span><div><b>${safe(v.code)}</b><small>${v.category==='ship'?'运输货船':v.category==='truck'?'干线货车':v.category==='drone'?'无人航空平台':'无人地面平台'}</small></div><span class="state-pill ${v.status}">${stateNames[v.status]||safe(v.status)}</span></div><div class="inspector-position"><span>推演位置</span><b class="mono">${position}</b></div><div class="inspector-metrics"><div><span>当前速度</span><b>${fmt(v.current_speed_kmh)}<small> km/h</small></b></div><div><span>配置载荷</span><b>${fmt(v.current_load_kg)}<small> kg</small></b></div></div><div class="range-status"><div><span>剩余模拟航程</span><b>${fmt(v.remaining_range_km)} km</b></div><div class="range-track"><i style="width:${v.range_remaining_pct}%"></i></div><small>${fmt(v.range_remaining_pct,0)}% · 由计划里程推算</small></div><dl class="inspector-facts"><div><dt>当前任务</dt><dd>${safe(v.mission_code||'尚未派遣')}</dd></div><div><dt>装载物资</dt><dd>${safe(v.cargo||'未装载')}</dd></div><div><dt>预计剩余</dt><dd>${v.eta_min==null?'—':fmt(v.eta_min)+' min'}</dd></div><div><dt>任务进度</dt><dd>${fmt(v.progress_pct,0)}%</dd></div><div><dt>已交付 / 分配</dt><dd>${v.completed_tasks} / ${v.task_count}</dd></div></dl>${mission?`<div class="selected-mission"><small>选中任务 · ${safe(mission.code)}</small><b>${safe(mission.cargo)}</b><p>${safe(nodeName(mission.origin))} → ${safe(nodeName(mission.destination))}</p><div>计划 ${clock(mission.start_min)} — ${clock(mission.end_min)}</div><div>截止 ${clock(mission.deadline_min)} · ${fmt(mission.weight_kg)} kg</div></div>`:''}<p class="inspector-footnote">平台状态由首次迭代事件推算，不是实际设备传感数据。</p>`;
  }
- function fleet(){const speedUnit=data.network?.network_id==='civil-airdrop'?'模型单位/h':'km/h';return (telemetry?.vehicles||[]).map(v=>`<button class="fleet-row ${v.vehicle_id===selected?'selected':''}" data-vehicle="${safe(v.vehicle_id)}" aria-pressed="${v.vehicle_id===selected}" style="--route-color:${vehicleColor(v.vehicle_id)}"><span class="fleet-route-key" title="与地图路线同色"></span><span><b>${safe(v.code)}</b><small>${safe(v.mission_code||'待命')}</small></span><span class="fleet-status">${stateNames[v.status]||safe(v.status)}</span><span class="mono">${fmt(v.current_speed_kmh,0)}<small> ${speedUnit}</small></span></button>`).join('');}
+ function fleet(){return (telemetry?.vehicles||[]).map(v=>`<button class="fleet-row ${v.vehicle_id===selected?'selected':''}" data-vehicle="${safe(v.vehicle_id)}" aria-pressed="${v.vehicle_id===selected}" style="--route-color:${vehicleColor(v.vehicle_id)}"><span class="fleet-route-key" title="与地图路线同色"></span><span><b>${safe(v.code)}</b><small>${safe(v.mission_code||'待命')}</small></span><span class="fleet-status">${stateNames[v.status]||safe(v.status)}</span><span class="mono">${fmt(v.current_speed_kmh,0)}<small> km/h</small></span></button>`).join('');}
  function missionSummary(){
   const mission=selectedMission(),view=taskView();
   if(!mission||!view)return '<div class="mission-focus-empty">选择左侧任务，查看取货、运输与交付过程。</div>';
@@ -104,7 +82,7 @@ export function mountAssessment(context){
   const shipments=$('#desk-shipments');if(shipments)shipments.innerHTML=shipmentMarkup(shipmentView(data.tasks,data.timeline,minute),nodeName,selectedTask);
   updateMission();drawMap();
   $('#desk-time').textContent=clock(minute);$('#desk-time-end').textContent=`/ ${fmt(maxTime(),1)} min`;
-  const slider=$('#desk-slider');if(slider){slider.value=minute;slider.style.setProperty('--progress',`${xPos(minute)}%`);}
+  const slider=$('#desk-slider');slider.value=minute;slider.style.setProperty('--progress',`${xPos(minute)}%`);
   el.querySelectorAll('.schedule-now').forEach(n=>n.style.left=`${xPos(minute)}%`);
   const cursor=$('#desk-trend-cursor');cursor?.setAttribute('x1',44+minute/maxTime()*873);cursor?.setAttribute('x2',44+minute/maxTime()*873);
   const stat=[...data.trend].reverse().find(p=>p.minute<=minute)||data.trend[0];
@@ -157,29 +135,6 @@ export function mountAssessment(context){
   for(const item of data.report.unassigned||[]){const task=data.tasks?.find(t=>t.id===item.task_id);rows.push([item.code,'',task?.cargo||'',task?.weight_kg,'','','','',task?.deadline_min,'未分配',item.reason,task?.shipment_id||'',task?.leg_index||1,task?.transport_mode==='sea'?'海运':'陆运',task?.predecessor_task_id||'']);}
   const blob=new Blob(['\uFEFF'+[cols,...rows].map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`${context.run.id}-评估结果.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
  }
- function experimentSelect(key,label){
-  return `<label class="exp-control"><span>${label}</span><select data-exp-var="${key}" aria-label="${label}">${experimentOptions[key].map(([value,title])=>`<option value="${value}" ${experimentVars[key]===value?'selected':''}>${title}</option>`).join('')}</select></label>`;
- }
- function experimentRibbon(){
-  return `<div class="desk-experiment-ribbon" role="region" aria-label="民用应急空投实验变量">
-   <div class="experiment-ribbon-top">
-    <div class="experiment-ribbon-brand"><b>实验变量</b><small>民用应急空投 · 本地预设</small></div>
-    <div class="experiment-ribbon-playback">
-     <button id="desk-play" class="desk-play" data-desk="play" aria-label="播放回放" title="播放或暂停">▶</button>
-     <button class="player-step" data-desk="previous" aria-label="上一个事件" title="上一个事件">|◀</button>
-     <button class="player-step" data-desk="next" aria-label="下一个事件" title="下一个事件">▶|</button>
-     <strong class="mono" id="desk-time">${clock(minute)}</strong><span class="mono" id="desk-time-end">/ ${fmt(maxTime(),1)} min</span>
-     <label class="speed-label">回放速度<select id="desk-speed" aria-label="回放速度">${(regional?[1,4,16,64,128,256,1024]:[1,4,16]).map(value=>`<option value="${value}" ${value===speed?'selected':''}>${value}×</option>`).join('')}</select></label>
-     <button class="player-step" data-desk="reset" aria-label="重置回放" title="重置回放">↺</button>
-    </div>
-    <div id="desk-experiment-status" class="experiment-ribbon-status" aria-live="polite">变量可保存为本地预设；运行后会创建独立实验记录。</div>
-   </div>
-   <div class="experiment-ribbon-controls">
-    ${experimentSelect('weather','天气')}${experimentSelect('wind_kmh','风速')}${experimentSelect('rain','降雨')}${experimentSelect('cloud_base','云底')}${experimentSelect('sea_state','海况')}${experimentSelect('payload_profile','载荷')}${experimentSelect('altitude_profile','飞行剖面')}${experimentSelect('battery_reserve_pct','电量余量')}
-    <button class="button button-ghost experiment-save" data-desk="apply-experiment">保存预设</button><button class="button button-primary experiment-save" data-desk="run-experiment">运行并记录</button>
-   </div>
-  </div>`;
- }
  function renderDesk(){
   const report=data.report,m=data.metrics;
   $('#desk-content').innerHTML=`<div class="desk-kpis"><div><span>${regional?'运输分段完成率':'当前任务完成率'}</span><b id="desk-completion">0%</b><small>首次迭代 / 全部任务 ${data.total_tasks} 项</small></div><div><span>累计交付 / 中断</span><b><em id="desk-delivered">0</em><i> / </i><em id="desk-failed">0</em><small>项</small></b><small>随回放时间同步累计</small></div><div><span>执行中平台</span><b><em id="desk-active">${telemetry.active_count}</em><small> / ${telemetry.vehicles.length} 台</small></b><small>来自当前回放时刻</small></div><div><span>${regional?'运单平均交付率':'多轮平均成功率'}</span><b>${fmt(regional?m.shipment_success_pct:m.success_pct)}<small>%</small></b><small>${data.iterations} 轮 · 种子 ${data.seed??'—'}</small></div><div><span>${regional?'运单准点率':'多轮准点率'}</span><b>${fmt(regional?m.shipment_on_time_pct:m.on_time_pct)}<small>%</small></b><small>综合评分 ${fmt(m.score)} / 100</small></div></div>
@@ -187,14 +142,14 @@ export function mountAssessment(context){
   <section class="desk-panel spatial-panel"><header><div><b>配送任务地图</b><small>MISSION ROUTE & PROGRESS</small></div><span class="live-badge"><i></i> 仿真回放</span></header><div class="mission-map-mode" role="group" aria-label="地图显示范围"><button type="button" data-map-mode="focus" aria-pressed="${mapMode==='focus'}">当前任务</button><button type="button" data-map-mode="overview" aria-pressed="${mapMode==='overview'}">全局态势</button><span>选择左侧任务可聚焦路线</span></div><div class="mission-focus" id="desk-mission-focus">${missionSummary()}</div><div class="desk-map-layers">${[['facilities','设施'],['links','通道'],['routes','路线'],['labels','标注']].map(([k,n])=>`<label><input type="checkbox" data-desk-layer="${k}" checked>${n}</label>`).join('')}<button data-desk="fit" title="适配当前显示范围">${icon('target',14)} 适配范围</button><button data-workspace-tool="legend" aria-expanded="false">路线图例</button></div>${context.sharedMap?'':geoMapMarkup()}<div class="map-status-strip mission-route-legend"><span><i class="route-key traveled"></i>已行驶</span><span><i class="route-key remaining"></i>待行驶</span><span><i class="route-key reposition"></i>去取货</span><small>合成通道示意 · 非道路导航轨迹</small></div></section>
   <aside class="desk-panel inspector-panel"><header><div><b>平台运行详情</b><small>PLATFORM INSPECTOR</small></div></header><div id="desk-inspector">${inspector()}</div></aside></div>
   <div class="desk-bottom"><section class="desk-panel trend-panel"><header><div><b>投送结果统计</b><small>DELIVERY RESULTS OVER TIME</small></div><span class="chart-hint">点击曲线可定位时间</span></header>${trend()}</section><section class="desk-panel fleet-panel"><header><div><b>参演平台</b><small>FLEET STATUS</small></div><span class="panel-counter">${telemetry.vehicles.length} 台</span></header><div id="desk-fleet">${fleet()}</div></section>${regional?`<aside class="desk-panel shipment-panel"><header><b>端到端运单</b><small>陆海接力 · 分段跟踪</small></header><div id="desk-shipments"></div></aside>`:''}</div>
-  ${experimentRibbon()}
+  <div class="desk-player"><button id="desk-play" class="desk-play" data-desk="play" aria-label="播放回放">▶</button><button class="player-step" data-desk="previous" aria-label="上一个事件" title="上一个事件">|◀</button><button class="player-step" data-desk="next" aria-label="下一个事件" title="下一个事件">▶|</button><strong class="mono" id="desk-time">${clock(minute)}</strong><span class="mono" id="desk-time-end">/ ${fmt(maxTime())} min</span><input id="desk-slider" type="range" min="0" max="${maxTime()}" step=".01" value="${minute}" aria-label="评估回放时间"><label class="speed-label">回放速度<select id="desk-speed" aria-label="回放速度">${(regional?[1,4,16,64,128,256,1024]:[1,4,16]).map(value=>`<option value="${value}" ${value===speed?'selected':''}>${value}×</option>`).join('')}</select></label><button data-workspace-tool="bookmarks" aria-expanded="false" title="显示时间快捷定位">定位</button><button class="player-step" data-desk="reset" aria-label="重置回放" title="重置回放">↺</button></div>
   <div class="desk-event-strip"><div id="desk-event"></div><button id="desk-connection" data-desk="retry">回放数据已同步</button></div><div class="desk-methodology"><span>${icon('shield',13)} ${safe(data.statistics_note)}</span><span>1× = 1 仿真分钟 / 秒 · 航程、速度和载荷为推算值</span></div>
-  ${report.totals.unassigned?`<div class="desk-notice">${report.totals.unassigned} 项任务未分配运力，已纳入完成率分母。请在空投方案中检查约束。</div>`:''}`;
+  ${report.totals.unassigned?`<div class="desk-notice">${report.totals.unassigned} 项任务未分配运力，已纳入完成率分母。请在联合投送方案中检查约束。</div>`:''}`;
   if(context.sharedMap){const focus=$('#desk-mission-focus');$('.inspector-panel').insertBefore(focus,$('#desk-inspector'));}
   updateTime();
  }
  async function load(){
-  if(!context.run){$('#desk-content').innerHTML='<div class="desk-empty desk-empty-large"><span>◇</span><b>当前想定还没有仿真记录</b><p>先在联合投送方案中生成方案，再运行空投仿真。结果将自动出现在这里。</p><button class="button button-primary" data-desk="planning">前往空投方案 →</button></div>';return;}
+  if(!context.run){$('#desk-content').innerHTML='<div class="desk-empty desk-empty-large"><span>◇</span><b>当前想定还没有推演记录</b><p>先在联合投送方案中生成方案，再运行行动推演。结果将自动出现在这里。</p><button class="button button-primary" data-desk="planning">前往方案规划 →</button></div>';return;}
   try{const result=await get(`/simulations/${encodeURIComponent(context.run.id)}/assessment?minute=${minute.toFixed(3)}`);if(disposed)return;data=result;telemetry=result.telemetry;minute=Math.min(minute,maxTime());selected=telemetry.vehicles.find(v=>v.task_count)?.vehicle_id||telemetry.vehicles[0]?.vehicle_id||'';selectedTask=data.timeline.find(t=>t.vehicle_id===selected)?.task_id||'';renderDesk();}
   catch(error){if(!disposed)$('#desk-content').innerHTML=`<div class="desk-empty desk-empty-large"><b>评估数据加载失败</b><p>${safe(error.message)}</p><button class="button button-primary" data-desk="reload">重试加载</button></div>`;}
  }
@@ -207,20 +162,6 @@ export function mountAssessment(context){
   const action=event.target.closest('[data-desk]')?.dataset.desk;if(!action)return;
   if(action==='dense'){context.onDense?.();return;}
   if(action==='play')playback();if(action==='reset')seek(0);if(action==='csv')download();
-  if(action==='apply-experiment'){
-   const status=$('#desk-experiment-status');
-   try{localStorage.setItem('aether-civil-airdrop-experiment-v1',JSON.stringify(experimentVars));if(status){status.textContent='已保存本地变量预设；历史推演未修改。';status.classList.add('is-saved');}}
-   catch{if(status)status.textContent='浏览器未允许本地保存，请检查隐私设置。';}
-   return;
-  }
-  if(action==='run-experiment'){
-   const status=$('#desk-experiment-status');
-   if(typeof context.onExperiment!=='function'){if(status)status.textContent='当前环境不支持写入实验记录。';return;}
-   if(status)status.textContent='正在运行实验并保存记录…';
-   const params={...experimentVars,wind_kmh:Number(experimentVars.wind_kmh),battery_reserve_pct:Number(experimentVars.battery_reserve_pct)};
-   Promise.resolve(context.onExperiment(params)).then(()=>{if(status){status.textContent='实验运行完成；记录已提交。';status.classList.add('is-saved');}}).catch(error=>{if(status)status.textContent='实验未完成：'+(error?.message||'请求失败');});
-   return;
-  }
   if(action==='previous')seek([...data.events].reverse().find(e=>e.at_min<minute-.01)?.at_min||0);
   if(action==='next')seek(data.events.find(e=>e.at_min>minute+.01)?.at_min??maxTime());
   if(action==='retry'){if(lastError)fetchTelemetry();}if(action==='reload')load();if(action==='planning')context.onPlanning?.();
@@ -236,13 +177,6 @@ export function mountAssessment(context){
   if(event.target.id==='assessment-run')context.onRun?.(event.target.value);
   if(event.target.id==='desk-filter'){filter=event.target.value;$('#desk-schedule').innerHTML=timeline();}
   if(event.target.id==='desk-speed')speed=Number(event.target.value);
-  if(event.target.dataset.expVar){
-   const key=event.target.dataset.expVar;
-   if(experimentOptions[key]?.some(([value])=>value===event.target.value)){
-    experimentVars[key]=event.target.value;
-    const status=$('#desk-experiment-status');if(status){status.textContent='变量已修改；点击运行并记录可创建新实验。';status.classList.remove('is-saved');}
-   }
-  }
   if(event.target.dataset.deskLayer){layers[event.target.dataset.deskLayer]=event.target.checked;drawMap();}
  },options);
  window.addEventListener('keydown',event=>{if(event.key==='Escape'&&el.classList.contains('assessment-expanded')){el.classList.remove('assessment-expanded');document.body.classList.remove('desk-expanded-body');el.querySelector('[data-desk="fullscreen"]').setAttribute('aria-label','全屏评估工作台');drawMap();}},options);

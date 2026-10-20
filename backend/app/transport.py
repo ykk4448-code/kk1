@@ -3,7 +3,6 @@ from collections import defaultdict
 
 
 def vehicle_mode(vehicle):
-    if vehicle['category']=='drone':return 'airdrop'
     return 'sea' if vehicle['category']=='ship' else 'road'
 
 

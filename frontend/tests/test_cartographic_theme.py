@@ -29,6 +29,6 @@ def test_mission_views():
         assert selector in CSS
 def test_five_entry_navigation_unchanged():
     app=(ROOT/'frontend/assets/app.js').read_text(encoding='utf-8')
-    for name in ['空投资源','应急场景','空投方案','空投仿真','实验评估']:
+    for name in ['基础数据','想定管理','联合投送方案','行动推演','评估分析']:
         assert name in app
     assert 'landing-modules' in app

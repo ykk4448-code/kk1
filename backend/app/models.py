@@ -108,22 +108,6 @@ class SimulationRun(Base):
     metrics: Mapped[dict] = mapped_column(JSON)
     events: Mapped[list] = mapped_column(JSON)
     samples: Mapped[list] = mapped_column(JSON)
-    experiment_data: Mapped[dict] = mapped_column(JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-
-class ExperimentRecord(Base):
-    """Immutable run record: inputs, model version, and result snapshot."""
-    __tablename__ = 'experiment_records'
-    id: Mapped[str] = mapped_column(String(40), primary_key=True)
-    scenario_id: Mapped[str] = mapped_column(ForeignKey('scenarios.id'), index=True)
-    plan_id: Mapped[str] = mapped_column(ForeignKey('plans.id'), index=True)
-    run_id: Mapped[str] = mapped_column(ForeignKey('simulation_runs.id'), unique=True, index=True)
-    name: Mapped[str] = mapped_column(String(120))
-    notes: Mapped[str] = mapped_column(Text, default='')
-    parameters: Mapped[dict] = mapped_column(JSON)
-    results: Mapped[dict] = mapped_column(JSON)
-    model_version: Mapped[str] = mapped_column(String(40), default='civil-airdrop-sim-v1')
-    created_by: Mapped[str] = mapped_column(String(64), default='system')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 class AuditLog(Base):

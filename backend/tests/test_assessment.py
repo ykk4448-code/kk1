@@ -94,14 +94,10 @@ def test_assessment_endpoint_auth_validation_and_time(client, admin_headers):
 
 def test_zero_capacity_has_finite_empty_trend_and_no_fabricated_success(client, admin_headers):
     h = admin_headers
-    sid = 'SCN-CIVIL-AIRDROP'
-    client.patch(BASE+f'/scenarios/{sid}/configuration', headers=h, json={'units': []})
-    plan_response = client.post(BASE+'/plans', headers=h, json={'scenario_id': sid})
-    assert plan_response.status_code == 201, plan_response.text
-    plan = plan_response.json()
-    run_response = client.post(BASE+'/simulations', headers=h, json={'plan_id': plan['id'], 'iterations': 3, 'seed': 9})
-    assert run_response.status_code == 201, run_response.text
-    result = assessment_projection(run_response.json(), plan)
+    client.patch(BASE+'/scenarios/SCN-001/configuration', headers=h, json={'units': []})
+    plan = client.post(BASE+'/plans', headers=h, json={'scenario_id': 'SCN-001'}).json()
+    run = client.post(BASE+'/simulations', headers=h, json={'plan_id': plan['id'], 'iterations': 3, 'seed': 9}).json()
+    result = assessment_projection(run, plan)
     assert result['timeline'] == []
     assert result['duration_min'] >= 1
     assert result['report']['totals']['unassigned'] == result['total_tasks']

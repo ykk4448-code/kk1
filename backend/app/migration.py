@@ -11,7 +11,6 @@ ADD_COLUMNS={
     'delivery_tasks':{'shipment_id':"VARCHAR(40) NOT NULL DEFAULT ''",'leg_index':'INTEGER NOT NULL DEFAULT 1','predecessor_task_id':"VARCHAR(40) NOT NULL DEFAULT ''",'handover_min':'FLOAT NOT NULL DEFAULT 0','transport_mode':"VARCHAR(16) NOT NULL DEFAULT 'road'"},
     'nodes': {'city_id': "VARCHAR(30) NOT NULL DEFAULT 'wuhan'", 'lon': 'FLOAT NOT NULL DEFAULT 114.3', 'lat': 'FLOAT NOT NULL DEFAULT 30.58', 'network_id': "VARCHAR(30) NOT NULL DEFAULT 'baseline'"},
     'scenarios': {'city_id': "VARCHAR(30) NOT NULL DEFAULT 'wuhan'", 'configuration_data': "JSON NOT NULL DEFAULT '{}'", 'network_id': "VARCHAR(30) NOT NULL DEFAULT 'baseline'"},
-    'simulation_runs': {'experiment_data': "JSON NOT NULL DEFAULT '{}'"},
 }
 
 def upgrade_schema():

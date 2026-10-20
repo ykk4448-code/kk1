@@ -9,14 +9,13 @@ let camera={key:'',center:[35,104],zoom:4,basemap:'streets'},saved=null;
 const colors={hub:'#246eb9',depot:'#278e9b',critical:'#bf8138',command:'#7961b5',delivery:'#358f78',port:'#128ca8'};
 export function geoMapMarkup(){return `<div class="geo-shell">
  <div class="geo-map-options"><span id="geo-map-summary" aria-live="polite"></span><label>路线范围 <select id="geo-route-scope" aria-label="地图路线显示范围"><option value="all">全部任务路线</option><option value="vehicle">选中平台路线</option><option value="task">选中任务路线</option><option value="shipment">整票运单路线</option></select></label></div>
- <div class="geo-map" id="geo-map" role="region" aria-label="合成空投场景图，相对坐标不代表真实地理位置"><div class="geo-grid"></div><svg class="geo-basemap" id="geo-basemap" aria-label="合成空投相对坐标示意图"></svg><div class="geo-tiles" id="geo-tiles"></div><div class="geo-tile-state" id="geo-tile-state" role="status"></div><svg class="geo-overlay" id="geo-overlay" aria-label="设施、任务路线及平台位置"></svg><div class="geo-city-label"><span class="signal-dot"></span><span id="geo-city-name">态势地图</span><small id="geo-system">WGS84</small></div><div class="geo-basemap-switch" role="group" aria-label="底图类型"><button data-basemap="vector" aria-pressed="true">政区图</button><button data-basemap="streets" aria-pressed="false">街道图</button></div><div class="geo-controls"><button data-map="nation" aria-label="查看中国全图" title="中国全图">中国</button><button data-map="in" aria-label="放大地图" title="放大">+</button><button data-map="out" aria-label="缩小地图" title="缩小">−</button><button data-map="fit" aria-label="适配全部节点" title="适配全部节点">⌖</button></div><div class="geo-scale" id="geo-coords"></div><div class="geo-attribution"><a href="https://datav.aliyun.com/portal/school/atlas/area_selector" target="_blank" rel="noreferrer">DataV.GeoAtlas / 高德</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OSM contributors</a></div></div>
+ <div class="geo-map" id="geo-map" role="region" aria-label="投送态势地图，支持缩放与拖动"><div class="geo-grid"></div><svg class="geo-basemap" id="geo-basemap" aria-label="中国及城市行政区划地理底图"></svg><div class="geo-tiles" id="geo-tiles"></div><div class="geo-tile-state" id="geo-tile-state" role="status"></div><svg class="geo-overlay" id="geo-overlay" aria-label="设施、任务路线及平台位置"></svg><div class="geo-city-label"><span class="signal-dot"></span><span id="geo-city-name">态势地图</span><small id="geo-system">WGS84</small></div><div class="geo-basemap-switch" role="group" aria-label="底图类型"><button data-basemap="vector" aria-pressed="true">政区图</button><button data-basemap="streets" aria-pressed="false">街道图</button></div><div class="geo-controls"><button data-map="nation" aria-label="查看中国全图" title="中国全图">中国</button><button data-map="in" aria-label="放大地图" title="放大">+</button><button data-map="out" aria-label="缩小地图" title="缩小">−</button><button data-map="fit" aria-label="适配全部节点" title="适配全部节点">⌖</button></div><div class="geo-scale" id="geo-coords"></div><div class="geo-attribution"><a href="https://datav.aliyun.com/portal/school/atlas/area_selector" target="_blank" rel="noreferrer">DataV.GeoAtlas / 高德</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OSM contributors</a></div></div>
  <div class="geo-route-legend" id="geo-route-legend" aria-label="路线颜色与运输平台"></div><div class="map-legend"><span><i style="background:#246eb9"></i>枢纽</span><span><i style="background:#278e9b"></i>转运站</span><span><i style="background:#bf8138"></i>重点设施</span><span class="map-note">彩线 = 平台任务 · 灰线 = 基础通道</span></div></div>`;}
 
 export function renderGeoMap(network,city,plan,opts={}){
  const el=document.getElementById('geo-map');if(!el)return;
  const nodes=network?.nodes||[],edges=network?.edges||[],fleet=network?.vehicles||[];
- const civilAirdrop=network?.network_id==='civil-airdrop';
- const geographic=!civilAirdrop&&nodes.length>0&&nodes.every(n=>Number.isFinite(n.lat)&&Number.isFinite(n.lon))&&new Set(nodes.map(n=>`${n.lat},${n.lon}`)).size>1;
+ const geographic=nodes.length>0&&nodes.every(n=>Number.isFinite(n.lat)&&Number.isFinite(n.lon))&&new Set(nodes.map(n=>`${n.lat},${n.lon}`)).size>1;
  const shipmentAssignments=opts.routeScope==='shipment'?(plan?.assignment_data||[]).filter(a=>a.shipment_id===opts.selectedShipment):[];
  const shipmentNodes=new Set(shipmentAssignments.flatMap(a=>a.path_nodes.slice(Math.max(0,(a.reposition_nodes?.length||1)-1))));
  const shipmentVehicles=new Set(shipmentAssignments.map(a=>a.vehicle_id));
@@ -143,10 +142,10 @@ export function renderGeoMap(network,city,plan,opts={}){
   actor.style.transition=opts.animate&&actor.dataset.projection===projection?'transform 460ms linear':'none';
   actor.dataset.projection=projection;actor.style.transform=`translate(${x}px,${y}px)`;
  }else actorLayer.innerHTML='';
- el.querySelector('#geo-city-name').textContent=civilAirdrop?'民用空投场景 · 合成 XY':geographic?`${city?.name||'方案快照'} · 行动区域`:`${opts.historical?'方案快照':city?.name||'演示区'} · 合成路网`;
+ el.querySelector('#geo-city-name').textContent=geographic?`${city?.name||'方案快照'} · 行动区域`:`${opts.historical?'方案快照':city?.name||'演示区'} · 合成路网`;
  el.querySelector('#geo-system').textContent=geographic?'地理参考':opts.home?'中国全图':'SYNTHETIC XY';
  el.querySelector('#geo-coords').textContent=geographic?`${camera.center[0].toFixed(4)}°N, ${camera.center[1].toFixed(4)}°E · Z${camera.zoom}`:'相对坐标网格 · 不代表真实地理位置';
- el.querySelector('.geo-attribution').hidden=civilAirdrop;
+ el.querySelector('.geo-attribution').hidden=false;
  saved={network,city,plan,opts};
  const redraw=()=>renderGeoMap(saved.network,saved.city,saved.plan,saved.opts);
  const shell=el.closest('.geo-shell'),summary=shell.querySelector('#geo-map-summary'),scopeSelect=shell.querySelector('#geo-route-scope');

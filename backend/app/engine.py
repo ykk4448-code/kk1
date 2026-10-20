@@ -11,7 +11,6 @@ from collections import defaultdict
 from statistics import mean
 from typing import Any
 from .transport import dependency_order,vehicle_mode
-from .airdrop import environmental_factors, normalize_parameters
 
 WEATHER_MULTIPLIER = {'clear': 1.0, 'rain': 1.18, 'wind': 1.28, 'fog': 1.22}
 
@@ -75,14 +74,9 @@ def find_path(graph: dict, start: str, goal: str, *, strategy: str = 'balanced',
 
 
 def generate_plan(nodes: list[dict], edges: list[dict], vehicles: list[dict], tasks: list[dict],
-                  scenario: dict, strategy: str = 'balanced', algorithm: str = 'astar',
-                  experiment: dict | None = None) -> dict:
-    graphs={mode:build_graph(nodes,[e for e in edges if e.get('transport_mode','road')==mode]) for mode in ('road','sea','airdrop')}
-    experiment = normalize_parameters(experiment) if experiment is not None else {}
-    weather = experiment.get('weather', scenario['weather'])
-    wind_kmh = experiment.get('wind_kmh', scenario['wind_kmh'])
-    visibility_km = experiment.get('visibility_km', scenario['visibility_km'])
-    factors = environmental_factors(experiment) if experiment else {'duration_factor':1.0,'risk_factor':1.0,'range_factor':1.0,'stress_factor':1.0}
+                  scenario: dict, strategy: str = 'balanced', algorithm: str = 'astar') -> dict:
+    graphs={mode:build_graph(nodes,[e for e in edges if e.get('transport_mode','road')==mode]) for mode in ('road','sea')}
+    weather = scenario['weather']
     state = {v['id']: {'node':v['home_node'], 'free':0.} for v in vehicles if v['status']=='available'}
     assignments = []
     unassigned = []
@@ -99,25 +93,19 @@ def generate_plan(nodes: list[dict], edges: list[dict], vehicles: list[dict], ta
         for vehicle in vehicles:
             if vehicle_mode(vehicle)!=mode:continue
             if vehicle['id'] not in state or vehicle['capacity_kg'] < task['weight_kg']: continue
-            if weather == 'wind' and wind_kmh >= 55 and vehicle['category'] == 'drone' and mode == 'airdrop': continue
+            if weather == 'wind' and scenario['wind_kmh'] >= 65 and vehicle['category'] == 'drone': continue
             current = state[vehicle['id']]
             reposition = find_path(graph, current['node'], task['origin'], strategy=strategy,weather=weather,algorithm=algorithm)
             delivery = find_path(graph, task['origin'], task['destination'],strategy=strategy,weather=weather,algorithm=algorithm)
             if not reposition or not delivery: continue
             distance = reposition['distance_km'] + delivery['distance_km']
-            usable_range = vehicle['range_km']
-            if mode == 'airdrop':
-                reserve = experiment.get('battery_reserve_pct', 30) if experiment else 30
-                usable_range *= (1 - reserve / 100) * factors['range_factor']
-            if distance > usable_range: continue
+            if distance > vehicle['range_km']: continue
             minutes = distance / vehicle['speed_kmh'] * 60 * WEATHER_MULTIPLIER[weather]
-            if mode == 'airdrop': minutes *= factors['duration_factor']
-            minutes *= 1.45 if visibility_km < 2 and vehicle['category']=='drone' else 1.0
+            minutes *= 1.45 if scenario['visibility_km'] < 2 and vehicle['category']=='drone' else 1.0
             minutes += 5 + task['weight_kg'] / max(vehicle['capacity_kg'], 1) * 5
             arrival = max(current['free'],ready_at) + minutes
             lateness = max(0., arrival - task['deadline_min'])
             risk = 1 - (1-reposition['risk'])*(1-delivery['risk'])
-            if mode == 'airdrop': risk = min(.95, risk * factors['risk_factor'])
             rank = arrival + lateness * 4 + (distance * 0.3 if strategy == 'balanced' else 0) + (risk * 70 if strategy == 'safest' else 0)
             choices.append((rank, arrival, vehicle['id'], vehicle, reposition, delivery, distance, minutes, risk))
         if not choices:
@@ -167,7 +155,7 @@ def _percentile(values: list[float], p: float) -> float:
 
 
 def simulate(plan: dict, scenario: dict, vehicles: list[dict], nodes: list[dict], edges: list[dict],
-             *, seed: int = 2026, iterations: int = 60, experiment: dict | None = None) -> dict:
+             *, seed: int = 2026, iterations: int = 60) -> dict:
     """Seeded simulation, sorted by scheduled start for each vehicle; no real-world forecasting."""
     if not 1 <= iterations <= 500: raise ValueError('iterations out of range')
     rng = random.Random(seed)
@@ -175,12 +163,8 @@ def simulate(plan: dict, scenario: dict, vehicles: list[dict], nodes: list[dict]
     node_lookup = {n['id']:n for n in nodes}
     edge_lookup = {e['id']:e for e in edges}
     assignments = sorted(plan['assignments'],key=lambda a:(a['start_min'],a['code']))
-    experiment = normalize_parameters(experiment) if experiment is not None else {}
-    weather = experiment.get('weather', scenario['weather'])
-    wind_kmh = experiment.get('wind_kmh', scenario['wind_kmh'])
-    stress = {'clear': 0.6, 'rain': 1.4, 'wind': 1.7, 'fog': 1.5}[weather] * (1 + max(0, wind_kmh-25)/100)
-    if experiment and any(a.get('transport_mode') == 'airdrop' for a in assignments):
-        stress *= environmental_factors(experiment)['stress_factor']
+    weather = scenario['weather']
+    stress = {'clear': 0.6, 'rain': 1.4, 'wind': 1.7, 'fog': 1.5}[weather] * (1 + max(0, scenario['wind_kmh']-25)/100)
     samples = []
     canonical_events = []
     for iteration in range(iterations):
@@ -264,8 +248,7 @@ def simulate(plan: dict, scenario: dict, vehicles: list[dict], nodes: list[dict]
                'distance_km':plan['summary']['distance_km'],
                'assigned_count':len(assignments),
                'unassigned_count':plan['summary']['unassigned_count'],
-               'iterations':iterations,'model':'Synthetic A*-Sim / v1',
-               'distance_basis':'abstract_model_units' if any(a.get('transport_mode')=='airdrop' for a in assignments) else 'km'}
+               'iterations':iterations,'model':'Synthetic A*-Sim / v1'}
     if plan['summary'].get('shipment_tasks'):
         metrics.update({'shipment_success_pct':round(mean(s['shipment_success_pct'] for s in samples),1),'shipment_on_time_pct':round(mean(s['shipment_on_time_pct'] for s in samples),1),'shipment_count':plan['summary']['shipment_count'],'sea_leg_count':plan['summary']['sea_leg_count']})
     return {'metrics':metrics,'events':canonical_events,'samples':samples}

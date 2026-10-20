@@ -102,6 +102,4 @@ def seed_database(db: Session):
     seed_geographic_demo(db)
     from .regional_demo import seed_regional_demo
     seed_regional_demo(db)
-    from .airdrop_demo import seed_civil_airdrop_demo
-    seed_civil_airdrop_demo(db)
     db.commit()
