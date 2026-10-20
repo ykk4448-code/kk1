@@ -211,7 +211,7 @@ function experimentsWorkspace(){
   '<p class="run-exp-note">参数将参与空投方案评分与多轮扰动计算。模型是教学用粗粒度假设，不是飞行性能预测或安全认证。</p>'+
   '<button class="button button-primary" type="submit">运行并保存实验记录 →</button></form>';
  const rows=records.map(function(x){
-  const q=x.parameters||{},m=(x.results||{}).metrics||{};
+  const q=x.parameters||{},m=(x.results||{}).metrics||{},factors=q.model_factors||null;
   const weather={clear:'晴朗',rain:'降雨',wind:'有风',fog:'低能见度'}[q.weather]||q.weather||'—';
   const rain={none:'无雨',light:'小雨',moderate:'中雨'}[q.rain]||q.rain||'—';
   const cloud={high:'高云底',medium:'中等云底',low:'低云底'}[q.cloud_base]||q.cloud_base||'—';
@@ -222,7 +222,7 @@ function experimentsWorkspace(){
   const algorithm={astar:'A*',dijkstra:'Dijkstra'}[x.results?.algorithm]||x.results?.algorithm||'—';
   return '<tr><td><b>'+txt(x.name)+'</b><small class="mono">'+txt(x.id)+' · '+txt(x.model_version)+'</small><small>创建者 '+txt(x.created_by)+'</small>'+(x.notes?'<small>'+txt(x.notes)+'</small>':'')+'</td>'+
    '<td>'+new Date(x.created_at).toLocaleString('zh-CN')+'</td>'+
-   '<td>'+txt(weather)+' · 风 '+nfmt(q.wind_kmh,0)+' · '+txt(rain)+'<small>'+txt(cloud)+' · 海况 '+txt(sea)+'</small><small>'+txt(payload)+' · 飞行剖面 '+txt(altitude)+' · 电量预留 '+txt(q.battery_reserve_pct)+'%</small></td>'+
+   '<td>'+txt(weather)+' · 风 '+nfmt(q.wind_kmh,0)+' · '+txt(rain)+'<small>'+txt(cloud)+' · 海况 '+txt(sea)+'</small><small>'+txt(payload)+' · 飞行剖面 '+txt(altitude)+' · 电量预留 '+txt(q.battery_reserve_pct)+'%</small>'+(factors?'<small>模型因子：时长 ×'+nfmt(factors.duration_factor,2)+' · 风险 ×'+nfmt(factors.risk_factor,2)+' · 续航 ×'+nfmt(factors.range_factor,2)+' · 扰动 ×'+nfmt(factors.stress_factor,2)+'</small>':'<small>此历史记录未保存派生模型因子</small>')+'</td>'+
    '<td>'+txt(strategy)+' / '+txt(algorithm)+'</td>'+
    '<td>'+(x.results?.iterations??'—')+' / '+(x.results?.seed??'—')+'</td>'+
    '<td>'+nfmt(m.success_pct,1)+'%</td><td>'+nfmt(m.on_time_pct,1)+'%</td><td>'+nfmt(m.score,1)+'</td>'+
