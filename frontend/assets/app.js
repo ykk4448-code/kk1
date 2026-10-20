@@ -279,8 +279,20 @@ function editResource(kind,id){
  showDialog('编辑无人机模型参数','仅影响新建的合成实验，不代表真实飞行器规格。',`${input('装备名称','name',`value="${txt(v.name)}" maxlength="80"`)}<div class="form-pair">${input('载荷 kg','capacity_kg',`type="number" min="0.01" step="0.1" value="${v.capacity_kg}"`)}${input('模型速度单位 / h','speed_kmh',`type="number" min="0.01" step="0.1" value="${v.speed_kmh}"`)}</div><div class="form-pair">${input('模型续航单位','range_km',`type="number" min="0.01" step="0.1" value="${v.range_km}"`)}${input('可靠度','reliability',`type="number" min="0" max="1" step="0.01" value="${v.reliability}"`)}</div><input type="hidden" name="resource_id" value="${txt(v.id)}">`,'vehicle-edit');
 }
 function newScenario(){showDialog('创建民用应急空投想定','新想定绑定当前合成空投网络；可继续配置民生物资与环境实验。',`${input('想定名称','name','maxlength="100" placeholder="民用应急物资空投对照想定"')}<label>任务描述<textarea name="description" rows="3" maxlength="2000" placeholder="背景、目标和约束"></textarea></label><div class="form-pair">${select('天气条件','weather',[['clear','晴朗'],['rain','降雨'],['wind','大风'],['fog','低能见度']])}${input('风速 km/h','wind_kmh','type="number" min="0" max="150" value="12"')}</div>${input('能见度 km','visibility_km','type="number" min="0.1" max="60" step="0.1" value="15"')}`,'scenario');}
-function newTask(task){const isEdit=!!task;const nodes=nodesChoices();const airdrop=S.network.network_id==='civil-airdrop';const origins=airdrop?nodes.filter(n=>n.id.startsWith('AIR-MAIN-')):nodes;const destinations=airdrop?nodes.filter(n=>n.id.startsWith('AIR-ISLE-')):nodes.slice().reverse();const fields=`${input('投送物资','cargo',`maxlength="90" value="${txt(task?.cargo||'')}" placeholder="应急医疗物资"`)}<div class="form-pair">${input('物资重量 kg','weight_kg',`type="number" min="0.1" max="5000" step="0.1" value="${task?.weight_kg||25}"`)}${input('截止时长 min','deadline_min',`type="number" min="1" max="43200" value="${task?.deadline_min||(S.city==='national'?9000:95)}"`)}</div>${isEdit?'':select('大陆侧补给点','origin',origins)+select('台湾侧接收点','destination',destinations)}${isEdit?'':select('投送方式','transport_mode',airdrop?[['airdrop','无人机空投']]:[['road','归档陆运'],['sea','归档海运']])+'<details class="form-advanced"><summary>实验分组与前置任务（可选）</summary>'+input('运单编号（关联多段运输时填写）','shipment_id','maxlength="40" value=""',false)+input('分段序号','leg_index','type="number" min="1" max="20" value="1"')+select('前置空投任务','predecessor_task_id',[['','首段 / 独立运输'],...S.tasks.filter(t=>t.shipment_id).map(t=>[t.id,t.code+' · '+t.cargo])])+input('任务准备时间 min','handover_min','type="number" min="0" max="1440" value="0"')+'</details>'}${select('紧急优先级','priority',[['1','P1 · 紧急'],['2','P2 · 常规'],['3','P3 · 低优先级']])}<input type="hidden" name="task_id" value="${txt(task?.id||'')}">`;
- showDialog(isEdit?'编辑投送任务':'新建投送任务',isEdit?(task.shipment_id?'物资名称和重量同步更新同一运单的全部分段；既有方案保持不变。':'任务修改仅影响下次新生成的方案。'):'为当前民用应急空投场景添加物资投送任务。',fields,isEdit?'task-edit':'task');
+function newTask(task){
+ const isEdit=!!task;
+ const nodes=nodesChoices();
+ const airdrop=S.network.network_id==='civil-airdrop';
+ const origins=airdrop?nodes.filter(n=>n.id.startsWith('AIR-MAIN-')):nodes;
+ const destinations=airdrop?nodes.filter(n=>n.id.startsWith('AIR-ISLE-')):nodes.slice().reverse();
+ const fields=input('投送物资','cargo','maxlength="90" value="'+txt(task?.cargo||'')+'" placeholder="应急医疗物资"')
+  +'<div class="form-pair">'+input('物资重量 kg','weight_kg','type="number" min="0.1" max="5000" step="0.1" value="'+(task?.weight_kg||25)+'"')
+  +input('截止时长 min','deadline_min','type="number" min="1" max="43200" value="'+(task?.deadline_min||150)+'')+'</div>'
+  +(isEdit?'':select('大陆侧补给点','origin',origins)+select('台湾侧接收点','destination',destinations)
+    +select('投送方式','transport_mode',airdrop?[['airdrop','无人机空投']]:[['road','归档陆运'],['sea','归档海运']]))
+  +select('紧急优先级','priority',[['1','P1 · 紧急'],['2','P2 · 常规'],['3','P3 · 低优先级']])
+  +'<input type="hidden" name="task_id" value="'+txt(task?.id||'')+'">';
+ showDialog(isEdit?'编辑空投任务':'新建民用应急物资空投任务',isEdit?'修改物资、重量、截止时长或优先级只影响后续新方案；已保存实验记录不变。':'每项任务必须使用大陆侧补给点到台湾侧接收点之间的直接空投示意通道。',fields,isEdit?'task-edit':'task');
  if(task)modal.querySelector('[name="priority"]').value=task.priority;
 }
 function hideDialog(){modal.innerHTML='';document.querySelector('.shell').inert=false;if(modalReturnFocus?.isConnected)modalReturnFocus.focus();modalReturnFocus=null;}
