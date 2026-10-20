@@ -37,3 +37,13 @@
  .experiment-ribbon-playback{flex-wrap:wrap}
  .experiment-ribbon-brand{flex-basis:100%}
 }
+
+/* Action simulation controls: environmental variables replace the bottom timeline slider. */
+.run-exp-toolbar{display:flex;flex-direction:column;gap:10px;margin:10px 0}
+.run-exp-playback{display:flex;align-items:center;gap:7px}
+.run-experiment-form{display:flex;align-items:flex-end;flex-wrap:wrap;gap:8px;padding:10px;background:#f4f8fb;border:1px solid #d8e5ed;border-radius:6px}
+.run-exp-control{display:flex;flex-direction:column;gap:4px;font-size:10px;color:#5c7c90;min-width:90px}
+.run-exp-control select{width:100%;height:29px;padding:4px 6px;font-size:11px;border:1px solid #cbdde7;border-radius:4px;background:white;color:#294f67}
+.run-exp-save{height:29px;min-height:29px;padding:5px 11px;font-size:10px;white-space:nowrap}
+.run-exp-note{margin:0;font-size:10px;line-height:1.5;color:#7b909e}
+@media(max-width:800px){.run-experiment-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.run-exp-control{min-width:0}.run-exp-save{grid-column:1/-1}}
